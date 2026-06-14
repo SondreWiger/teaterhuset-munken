@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { ReviewsSection } from "@/components/reviews-section";
 
 function extractYoutubeId(url: string): string | null {
   const match = url?.match(
@@ -147,6 +148,7 @@ export function VideoCard({
     description: string | null;
     youtube_url: string | null;
     vimeo_url: string | null;
+    trailer_url: string | null;
     price: number;
   };
   hasAccess: boolean;
@@ -154,6 +156,7 @@ export function VideoCard({
   children?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [showTrailer, setShowTrailer] = useState(false);
   const [hovered, setHovered] = useState(false);
   const thumbnail = getVideoThumbnail(video.youtube_url, video.vimeo_url);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -265,6 +268,18 @@ export function VideoCard({
                 <span className="text-sm font-medium text-muted">
                   Låst
                 </span>
+                {video.trailer_url && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowTrailer(true);
+                      setOpen(true);
+                    }}
+                    className="text-xs text-gold hover:text-gold-light transition-colors mt-2"
+                  >
+                    Se smakebit →
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -342,17 +357,32 @@ export function VideoCard({
 
             {/* Video */}
             <div className="relative w-full aspect-video rounded-xl sm:rounded-2xl overflow-hidden bg-black border border-white/[0.06]">
-              {getEmbedUrl(video.youtube_url, video.vimeo_url) && (
-                <iframe
-                  src={getEmbedUrl(video.youtube_url, video.vimeo_url)!}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; display-capture; airplay"
-                  allowFullScreen
-                />
-              )}
+              {(() => {
+                const embedUrl = showTrailer && video.trailer_url
+                  ? getEmbedUrl(
+                      video.trailer_url.includes("youtube") ? video.trailer_url : null,
+                      video.trailer_url.includes("vimeo") ? video.trailer_url : null
+                    )
+                  : getEmbedUrl(video.youtube_url, video.vimeo_url);
+                return embedUrl ? (
+                  <iframe
+                    src={embedUrl}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; display-capture; airplay"
+                    allowFullScreen
+                  />
+                ) : null;
+              })()}
               {/* AirPlay hint on iOS */}
               <AirPlayButton iframeRef={modalRef} />
             </div>
+
+            {/* Reviews */}
+            {hasAccess && (
+              <div className="mt-4 sm:mt-6">
+                <ReviewsSection videoId={video.id} />
+              </div>
+            )}
 
             {/* Mobile: swipe hint */}
             <p className="text-center text-muted/40 text-xs mt-3 sm:hidden">

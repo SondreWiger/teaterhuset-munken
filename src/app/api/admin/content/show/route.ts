@@ -37,6 +37,8 @@ export async function POST(request: Request) {
       image_url: body.image_url || null,
       year: body.year || new Date().getFullYear(),
       published: body.published ?? false,
+      publish_at: body.publish_at || null,
+      bundle_price: body.bundle_price || null,
     })
     .select()
     .single();
@@ -69,6 +71,8 @@ export async function PATCH(request: Request) {
       ...(body.image_url !== undefined && { image_url: body.image_url }),
       ...(body.year !== undefined && { year: body.year }),
       ...(body.published !== undefined && { published: body.published }),
+      ...(body.publish_at !== undefined && { publish_at: body.publish_at }),
+      ...(body.bundle_price !== undefined && { bundle_price: body.bundle_price }),
     })
     .eq("id", body.id);
 

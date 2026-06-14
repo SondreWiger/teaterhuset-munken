@@ -14,12 +14,13 @@ export default async function SearchPage(props: {
   let roles: any[] = [];
 
   if (query) {
+    const now = new Date().toISOString();
     const [showsResult, rolesResult] = await Promise.all([
       adminDb
         .from("shows")
         .select("*, teams(*, videos(*, team_roles(*, roles(*))))")
         .eq("published", true)
-        .or(`title.ilike.%${query}%,description.ilike.%${query}%`),
+        .or(`publish_at.is.null,publish_at.lte.${now},title.ilike.%${query}%,description.ilike.%${query}%`),
       adminDb
         .from("roles")
         .select("*")

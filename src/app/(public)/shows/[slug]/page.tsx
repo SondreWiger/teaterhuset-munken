@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { BuyButton } from "./buy-button";
 import { VideoCard } from "@/components/video-card";
 import { ShareButton } from "@/components/share-button";
+import { CommentsSection } from "@/components/comments-section";
+import { GallerySection } from "@/components/gallery-section";
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;
@@ -13,11 +15,13 @@ export async function generateMetadata(props: {
   const { slug } = await props.params;
   const adminDb = createAdminClient();
 
+  const now = new Date().toISOString();
   const { data: show } = await adminDb
     .from("shows")
     .select("title, description, image_url")
     .eq("id", slug)
     .eq("published", true)
+    .or(`publish_at.is.null,publish_at.lte.${now}`)
     .single();
 
   if (!show) return { title: "Forestilling ikke funnet" };
@@ -41,11 +45,13 @@ export default async function ShowPage(props: {
   const supabase = await createClient();
   const adminDb = createAdminClient();
 
+  const now = new Date().toISOString();
   const { data: show } = await adminDb
     .from("shows")
     .select("*, teams(*, videos(*), team_roles(*, roles(*)))")
     .eq("id", slug)
     .eq("published", true)
+    .or(`publish_at.is.null,publish_at.lte.${now}`)
     .single();
 
   if (!show) notFound();
@@ -80,6 +86,12 @@ export default async function ShowPage(props: {
         team_name: t.name,
       }))
   );
+
+  const { data: showImages } = await adminDb
+    .from("show_images")
+    .select("*")
+    .eq("show_id", slug)
+    .order("sort_order");
 
   return (
     <div className="relative">
@@ -284,6 +296,30 @@ export default async function ShowPage(props: {
           </div>
         </section>
       )}
+
+      {/* Gallery */}
+      {showImages && showImages.length > 0 && (
+        <section className="relative border-t border-white/[0.04]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-1 h-6 rounded-full bg-gradient-to-b from-gold to-gold-light" />
+              <h2 className="text-xl font-bold">Bilder</h2>
+            </div>
+            <GallerySection images={showImages} />
+          </div>
+        </section>
+      )}
+
+      {/* Comments */}
+      <section className="relative border-t border-white/[0.04]">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-1 h-6 rounded-full bg-gradient-to-b from-gold to-gold-light" />
+            <h2 className="text-xl font-bold">Diskusjon</h2>
+          </div>
+          <CommentsSection showId={show.id} />
+        </div>
+      </section>
     </div>
   );
 }

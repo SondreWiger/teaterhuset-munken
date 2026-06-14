@@ -30,6 +30,10 @@ export default function RootLayout({
       lang="nb"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#d4a843" />
+      </head>
       <body className="min-h-full flex flex-col grain">
         <Navbar />
         <main className="flex-1 pt-20">{children}</main>

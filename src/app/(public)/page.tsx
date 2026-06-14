@@ -6,11 +6,13 @@ export default async function HomePage(props: {
 }) {
   const searchParams = await props.searchParams;
   const adminDb = createAdminClient();
+  const now = new Date().toISOString();
   const [showsResult, settingsResult] = await Promise.all([
     adminDb
       .from("shows")
       .select("*, teams(*, videos(*))")
       .eq("published", true)
+      .or(`publish_at.is.null,publish_at.lte.${now}`)
       .order("year", { ascending: false })
       .order("created_at", { ascending: false }),
     adminDb.from("settings").select("*"),

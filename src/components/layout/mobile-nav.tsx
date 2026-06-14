@@ -69,6 +69,15 @@ export function MobileNav({
                   Admin
                 </Link>
               )}
+              {user && (
+                <Link
+                  href="/dashboard/profile"
+                  onClick={() => setOpen(false)}
+                  className="px-4 py-3 text-sm text-muted hover:text-foreground rounded-xl hover:bg-white/[0.04] transition-all"
+                >
+                  Profil
+                </Link>
+              )}
               <div className="border-t border-white/[0.04] mt-2 pt-3">
                 <AuthButton user={user} />
               </div>

@@ -16,23 +16,54 @@ export default async function LibraryPage(props: {
   if (!user) redirect("/login");
 
   const adminDb = createAdminClient();
-  const { data: purchases } = await adminDb
-    .from("purchases")
-    .select("*, videos(*, teams(*, shows(*)))")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const [purchasesResult, watchResult, favoritesResult, subscriptionResult] = await Promise.all([
+    adminDb
+      .from("purchases")
+      .select("*, videos(*, teams(*, shows(*)))")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    adminDb
+      .from("watch_history")
+      .select("*, videos(*, teams(*, shows(*)))")
+      .eq("user_id", user.id)
+      .order("last_watched_at", { ascending: false }),
+    adminDb
+      .from("favorites")
+      .select("*, videos(*, teams(*, shows(*)))")
+      .eq("user_id", user.id),
+    adminDb
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("active", true),
+  ]);
 
-  const hasSubscription = false;
+  const purchases = purchasesResult.data || [];
+  const watchHistory = watchResult.data || [];
+  const favorites = favoritesResult.data || [];
+  const activeSubscription = subscriptionResult.data?.find(
+    (s: any) => new Date(s.end_date) > new Date()
+  );
+
+  const hasSubscription = !!activeSubscription;
+
+  // "Continue watching" - videos that are partially watched but not completed
+  const continueWatching = watchHistory
+    .filter((w: any) => !w.completed && w.progress_seconds > 0)
+    .slice(0, 6);
+
+  // Recently watched
+  const recentlyWatched = watchHistory.slice(0, 6);
 
   const years = [
     ...new Set(
-      purchases?.map((p: any) => p.videos?.teams?.shows?.year).filter(Boolean)
+      purchases.map((p: any) => p.videos?.teams?.shows?.year).filter(Boolean)
     ),
   ].sort((a, b) => (b as number) - (a as number)) as number[];
 
   const activeYear = searchParams.year ? Number(searchParams.year) : null;
   const filteredPurchases = activeYear
-    ? purchases?.filter(
+    ? purchases.filter(
         (p: any) => p.videos?.teams?.shows?.year === activeYear
       )
     : purchases;
@@ -46,7 +77,7 @@ export default async function LibraryPage(props: {
     }
   > = {};
 
-  filteredPurchases?.forEach((purchase: any) => {
+  filteredPurchases.forEach((purchase: any) => {
     const video = purchase.videos;
     if (!video) return;
     const team = video.teams;
@@ -97,7 +128,7 @@ export default async function LibraryPage(props: {
         </div>
       )}
 
-      {!filteredPurchases?.length && !hasSubscription && (
+      {!purchases.length && !hasSubscription && (
         <div className="text-center py-28">
           <div className="text-7xl mb-6 animate-float">🎭</div>
           <p className="text-xl text-muted mb-2">
@@ -115,6 +146,82 @@ export default async function LibraryPage(props: {
         </div>
       )}
 
+      {/* Continue watching */}
+      {continueWatching.length > 0 && (
+        <section className="mb-14">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-semibold">
+              Fortsett å <span className="text-gradient-gold">se</span>
+            </h2>
+          </div>
+          <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+            {continueWatching.map((w: any) => {
+              const video = w.videos;
+              if (!video) return null;
+              const progress = w.duration_seconds > 0
+                ? (w.progress_seconds / w.duration_seconds) * 100
+                : 0;
+              return (
+                <div key={w.id} className="shrink-0 w-72 snap-start">
+                  <VideoCard
+                    video={video}
+                    hasAccess={true}
+                    teamColor={video.teams?.color || "#d4a843"}
+                  />
+                  {/* Progress bar */}
+                  <div className="mt-2 h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div
+                      className="h-full bg-gold rounded-full transition-all"
+                      style={{ width: `${Math.min(progress, 100)}%` }}
+                    />
+                  </div>
+                  <div className="px-1 pt-1 flex items-center justify-between text-xs text-muted">
+                    <span>{video.teams?.name}</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Favorites */}
+      {favorites.length > 0 && (
+        <section className="mb-14">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-semibold">
+              <span className="text-gradient-gold">Favoritter</span>
+            </h2>
+          </div>
+          <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+            {favorites.map((fav: any) => {
+              const video = fav.videos;
+              if (!video) return null;
+              return (
+                <div key={fav.id} className="shrink-0 w-72 snap-start">
+                  <VideoCard
+                    video={video}
+                    hasAccess={true}
+                    teamColor={video.teams?.color || "#d4a843"}
+                  />
+                  <div className="px-1 pt-2 flex items-center gap-1.5 text-xs text-muted">
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: video.teams?.color }}
+                    />
+                    <span style={{ color: video.teams?.color }}>
+                      {video.teams?.name}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Year filter */}
       {years.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-12">
           <Link
@@ -141,6 +248,7 @@ export default async function LibraryPage(props: {
         </div>
       )}
 
+      {/* All shows */}
       <div className="space-y-16">
         {paginatedShows.map(({ show, teams }) => {
           const teamEntries = Object.values(teams);

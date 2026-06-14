@@ -62,6 +62,8 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     image_url: "",
     year: new Date().getFullYear(),
     published: false,
+    publish_at: "",
+    bundle_price: "",
   });
 
   const [teamForm, setTeamForm] = useState({
@@ -77,6 +79,7 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     description: "",
     youtube_url: "",
     vimeo_url: "",
+    trailer_url: "",
     price: 0,
     sort_order: 0,
     published: false,
@@ -113,9 +116,13 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     if (!showForm.title) return;
     setLoading(true);
     try {
-      await api("/api/admin/content/show", "POST", showForm);
+      await api("/api/admin/content/show", "POST", {
+        ...showForm,
+        publish_at: showForm.publish_at || null,
+        bundle_price: showForm.bundle_price ? Number(showForm.bundle_price) : null,
+      });
       toast.success("Forestilling opprettet!");
-      setShowForm({ title: "", description: "", image_url: "", year: new Date().getFullYear(), published: false });
+      setShowForm({ title: "", description: "", image_url: "", year: new Date().getFullYear(), published: false, publish_at: "", bundle_price: "" });
       window.location.reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
@@ -189,6 +196,7 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
         description: "",
         youtube_url: "",
         vimeo_url: "",
+        trailer_url: "",
         price: 0,
         sort_order: 0,
         published: false,
@@ -359,6 +367,27 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
             }
             min={1900}
             max={2100}
+            className={inputClass}
+          />
+          <input
+            type="datetime-local"
+            placeholder="Publiseringsdato (valgfritt)"
+            value={showForm.publish_at}
+            onChange={(e) =>
+              setShowForm({ ...showForm, publish_at: e.target.value })
+            }
+            className={inputClass}
+          />
+          <p className="text-xs text-muted -mt-2">
+            Hvis satt, vises forestillingen bare etter denne datoen.
+          </p>
+          <input
+            type="number"
+            placeholder="Pakkepris for hele forestillingen (valgfritt, kr)"
+            value={showForm.bundle_price}
+            onChange={(e) =>
+              setShowForm({ ...showForm, bundle_price: e.target.value })
+            }
             className={inputClass}
           />
           <label className="flex items-center gap-2 text-sm">
@@ -653,6 +682,26 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
                               setVideoForm({
                                 ...videoForm,
                                 vimeo_url: e.target.value,
+                              })
+                            }
+                            className={`${smallInputClass} flex-1`}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            placeholder="Trailer URL (valgfritt)"
+                            value={
+                              editingTeam === team.id ? videoForm.trailer_url : ""
+                            }
+                            onFocus={() => {
+                              setEditingTeam(team.id);
+                              setVideoForm({ ...videoForm, team_id: team.id });
+                            }}
+                            onChange={(e) =>
+                              setVideoForm({
+                                ...videoForm,
+                                trailer_url: e.target.value,
                               })
                             }
                             className={`${smallInputClass} flex-1`}

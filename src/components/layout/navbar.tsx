@@ -58,6 +58,14 @@ export async function Navbar() {
                   Admin
                 </Link>
               )}
+              {user && (
+                <Link
+                  href="/dashboard/profile"
+                  className="px-4 py-2 text-sm text-muted hover:text-foreground rounded-lg hover:bg-white/[0.04] transition-all"
+                >
+                  Profil
+                </Link>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
