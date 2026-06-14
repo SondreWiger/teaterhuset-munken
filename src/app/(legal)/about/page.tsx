@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Om oss — Teaterhuset Munken",
-  description: "Lær om Teaterhuset Munken og hva vi driver med.",
+  description: "Lær om Teaterhuset Munken — barne- og ungdomsteater i Larvik.",
 };
 
 export default function AboutPage() {
@@ -17,18 +17,18 @@ export default function AboutPage() {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Hva er Teaterhuset Munken?</h2>
           <p>
-            Teaterhuset Munken er en digital plattform for teaterforestillinger. Vi gir
-            publikum muligheten til å se teaterforestillingene når det passer dem — hjemme
-            i sofaen, på hygga eller hvor som helst.
+            Teaterhuset Munken er et barne- og ungdomsteater i Larvik, Norge. Vi produserer
+            teaterforestillinger for barn og ungdom, og gir publikum muligheten til å se
+            forestillingene når det passer dem — hjemme, på skolen eller hvor som helst.
           </p>
         </section>
 
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Vår visjon</h2>
           <p>
-            Vi tror at teater skal være tilgjengelig for alle, uavhengig av geografi og
-            tidspunkt. Ved å tilby forestillingene våre på nett, når vi ut til et større
-            publikum og gir deg fleksibiliteten til å se når det passer deg.
+            Vi tror at teater skal være tilgjengelig for alle barn og ungdom, uavhengig av
+            geografi og tidspunkt. Ved å tilby forestillingene våre på nett, når vi ut til
+            et større publikum og gir fleksibiliteten til å se når det passer.
           </p>
         </section>
 

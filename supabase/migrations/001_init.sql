@@ -301,8 +301,8 @@ CREATE POLICY "Admins can insert settings"
 -- Default settings
 INSERT INTO settings (key, value) VALUES
   ('site_name', 'Teaterhuset Munken'),
-  ('hero_title', 'Teater på nett — når det passer deg'),
-  ('hero_subtitle', 'Se våre magiske forestillinger hjemmefra. Kjøp enkeltvis eller få tilgang til alt med abonnement.'),
+  ('hero_title', 'Teaterhuset Munken'),
+  ('hero_subtitle', 'Barne- og ungdomsteater i Larvik. Se våre forestillinger når det passer deg.'),
   ('hero_image_url', '')
 ON CONFLICT (key) DO NOTHING;
 

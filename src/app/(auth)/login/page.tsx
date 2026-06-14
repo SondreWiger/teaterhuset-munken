@@ -193,7 +193,7 @@ export default function LoginPage() {
               Teaterhuset Munken
             </h2>
             <p className="text-muted max-w-sm leading-relaxed">
-              Se teaterforestillinger på nett. Kjøp tilgang og se når det
+              Barne- og ungdomsteater i Larvik. Se forestillingene når det
               passer deg.
             </p>
             <div className="mt-12 flex items-center justify-center gap-3">

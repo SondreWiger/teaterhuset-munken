@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Teaterhuset Munken — Se teater når det passer deg",
+  title: "Teaterhuset Munken — Barne- og ungdomsteater i Larvik",
   description:
-    "Kjøp tilgang til teaterforestillinger på nett. Se lag, videoer og unike fremføringer når du vil.",
+    "Teaterhuset Munken er et barne- og ungdomsteater i Larvik, Norge. Se forestillinger når det passer deg.",
 };
 
 export default function RootLayout({

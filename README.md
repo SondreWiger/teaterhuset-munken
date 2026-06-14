@@ -1,6 +1,6 @@
 # Teaterhuset Munken
 
-Teaterforestillinger på nett — se lag, videoer og unike fremføringer når det passer deg.
+Barne- og ungdomsteater i Larvik, Norge. Platform for å selge tilgang til vår portefølje av teaterforestillinger.
 
 ## Tech Stack
 

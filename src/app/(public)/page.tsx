@@ -23,10 +23,10 @@ export default async function HomePage(props: {
   });
 
   const heroImage = settings.hero_image_url;
-  const heroTitle = settings.hero_title || "Teater på nett";
+  const heroTitle = settings.hero_title || "Teaterhuset Munken";
   const heroSubtitle =
     settings.hero_subtitle ||
-    "Se våre magiske forestillinger når det passer deg.";
+    "Barne- og ungdomsteater i Larvik. Se våre forestillinger når det passer deg.";
 
   const years = [...new Set(shows.map((s: any) => s.year))].sort(
     (a, b) => (b as number) - (a as number)
