@@ -13,13 +13,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const adminDb = createAdminClient();
+    const { data: profiles } = await adminDb
       .from("profiles")
       .select("role")
-      .eq("id", user.id)
-      .single();
+      .eq("id", user.id);
 
-    if (profile?.role !== "admin") {
+    const profile = profiles?.[0];
+    if (!profile || profile.role !== "admin") {
       return NextResponse.json({ error: "Ikke tilgang" }, { status: 403 });
     }
 
@@ -35,7 +36,6 @@ export async function POST(request: Request) {
 
     const code = `QR-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
-    const adminDb = createAdminClient();
     const { data: qrCode, error } = await adminDb
       .from("qr_codes")
       .insert({
