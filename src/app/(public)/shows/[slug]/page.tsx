@@ -8,6 +8,7 @@ import { VideoCard } from "@/components/video-card";
 import { ShareButton } from "@/components/share-button";
 import { CommentsSection } from "@/components/comments-section";
 import { GallerySection } from "@/components/gallery-section";
+import { RelatedShows } from "@/components/related-shows";
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;
@@ -92,6 +93,13 @@ export default async function ShowPage(props: {
     .select("*")
     .eq("show_id", slug)
     .order("sort_order");
+
+  const { data: showTags } = await adminDb
+    .from("show_tags")
+    .select("tag")
+    .eq("show_id", slug);
+
+  const tags = showTags?.map((t: any) => t.tag) || [];
 
   return (
     <div className="relative">
@@ -320,6 +328,9 @@ export default async function ShowPage(props: {
           <CommentsSection showId={show.id} />
         </div>
       </section>
+
+      {/* Related shows */}
+      <RelatedShows showId={show.id} tags={tags} />
     </div>
   );
 }

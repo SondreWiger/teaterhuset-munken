@@ -35,8 +35,11 @@ export default function RootLayout({
         <meta name="theme-color" content="#d4a843" />
       </head>
       <body className="min-h-full flex flex-col grain">
+        <a href="#main-content" className="skip-link">
+          Hopp til hovedinnhold
+        </a>
         <Navbar />
-        <main className="flex-1 pt-20">{children}</main>
+        <main id="main-content" className="flex-1 pt-20" role="main">{children}</main>
         <Toaster
           theme="dark"
           position="bottom-right"
@@ -49,7 +52,7 @@ export default function RootLayout({
             },
           }}
         />
-        <footer className="border-t border-border/50 py-8 mt-auto">
+        <footer className="border-t border-border/50 py-8 mt-auto" role="contentinfo">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-2">

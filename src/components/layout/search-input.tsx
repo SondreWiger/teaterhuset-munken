@@ -51,6 +51,7 @@ export function SearchInput() {
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder="Søk..."
+            aria-label="Søk i forestillinger og roller"
             className="bg-transparent border-0 outline-none text-sm py-2 px-2 w-40 focus:w-56 transition-all duration-300 text-foreground placeholder:text-muted/50"
           />
         </div>

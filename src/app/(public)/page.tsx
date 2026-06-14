@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { NewsletterSignup } from "@/components/newsletter-signup";
 
 export default async function HomePage(props: {
   searchParams: Promise<{ year?: string }>;
@@ -321,6 +322,9 @@ export default async function HomePage(props: {
           })}
         </div>
       </section>
+
+      {/* Newsletter */}
+      <NewsletterSignup />
 
       {/* CTA */}
       <section className="relative overflow-hidden">

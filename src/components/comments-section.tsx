@@ -18,6 +18,9 @@ export function CommentsSection({ showId }: { showId: string }) {
   const [replyContent, setReplyContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [reportedComments, setReportedComments] = useState<string[]>([]);
+  const [reportingComment, setReportingComment] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
 
   useEffect(() => {
     fetch(`/api/comments?show_id=${showId}`)
@@ -66,6 +69,17 @@ export function CommentsSection({ showId }: { showId: string }) {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleReport = async (commentId: string, reason: string) => {
+    const res = await fetch("/api/reports", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ comment_id: commentId, reason }),
+    });
+    if (res.ok) {
+      setReportedComments((prev) => [...prev, commentId]);
     }
   };
 
@@ -150,6 +164,16 @@ export function CommentsSection({ showId }: { showId: string }) {
                 >
                   Svar
                 </button>
+                {!reportedComments.includes(comment.id) ? (
+                  <button
+                    onClick={() => setReportingComment(reportingComment === comment.id ? null : comment.id)}
+                    className="text-xs text-muted hover:text-danger transition-colors"
+                  >
+                    Rapporter
+                  </button>
+                ) : (
+                  <span className="text-xs text-danger/60">Rapportert</span>
+                )}
                 <button
                   onClick={() => handleDelete(comment.id)}
                   className="text-xs text-muted hover:text-danger transition-colors"
@@ -157,6 +181,24 @@ export function CommentsSection({ showId }: { showId: string }) {
                   Slett
                 </button>
               </div>
+
+              {/* Report form */}
+              {reportingComment === comment.id && (
+                <div className="mt-2 rounded-lg bg-danger/[0.05] border border-danger/10 p-3 space-y-2">
+                  <p className="text-xs text-danger font-medium">Hvorfor rapporterer du denne?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {["Uønsket innhold", "Sjikane", "Spam", "Feil informasjon"].map((reason) => (
+                      <button
+                        key={reason}
+                        onClick={() => { handleReport(comment.id, reason); setReportingComment(null); }}
+                        className="rounded-lg border border-white/[0.06] px-2.5 py-1 text-xs text-muted hover:text-foreground hover:border-danger/20 transition-all"
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Replies */}

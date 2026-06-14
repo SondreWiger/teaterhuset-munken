@@ -87,6 +87,8 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
 
   const [editingVideo, setEditingVideo] = useState<string | null>(null);
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
+  const [showTags, setShowTags] = useState<Record<string, string[]>>({});
+  const [tagInput, setTagInput] = useState<Record<string, string>>({});
 
   const [allRoles, setAllRoles] = useState<Role[]>([]);
   const [roleFormName, setRoleFormName] = useState("");
@@ -110,6 +112,37 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Noe gikk galt");
     return data;
+  };
+
+  const handleAddTag = async (showId: string) => {
+    const input = tagInput[showId] || "";
+    if (!input.trim()) return;
+    const existing = showTags[showId] || [];
+    const newTags = [...existing, ...input.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)];
+    try {
+      await api("/api/tags", "POST", { show_id: showId, tags: newTags });
+      setShowTags((prev) => ({ ...prev, [showId]: newTags }));
+      setTagInput((prev) => ({ ...prev, [showId]: "" }));
+      toast.success("Tagg oppdatert!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Feil");
+    }
+  };
+
+  const handleRemoveTag = async (showId: string, tag: string) => {
+    const existing = (showTags[showId] || []).filter((t) => t !== tag);
+    try {
+      await api("/api/tags", "POST", { show_id: showId, tags: existing });
+      setShowTags((prev) => ({ ...prev, [showId]: existing }));
+      toast.success("Tagg fjernet!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Feil");
+    }
+  };
+
+  const loadTags = async (showId: string) => {
+    const tags = await api(`/api/tags?show_id=${showId}`, "GET");
+    setShowTags((prev) => ({ ...prev, [showId]: tags.map((t: any) => t.tag) }));
   };
 
   const handleCreateShow = async () => {
@@ -426,9 +459,10 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
             >
               <div
                 className="flex items-center justify-between p-5 cursor-pointer hover:bg-white/[0.02] transition-colors"
-                onClick={() =>
-                  setExpandedShow(expandedShow === show.id ? null : show.id)
-                }
+                onClick={() => {
+                  setExpandedShow(expandedShow === show.id ? null : show.id);
+                  if (expandedShow !== show.id) loadTags(show.id);
+                }}
               >
                 <div className="flex items-center gap-3">
                   <span
@@ -483,6 +517,51 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
 
               {expandedShow === show.id && (
                 <div className="border-t border-white/[0.04] p-5 space-y-6">
+                  {/* Tags section */}
+                  <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-medium text-muted">Tagger for søk og relaterede forestillinger</h5>
+                      <button
+                        onClick={() => loadTags(show.id)}
+                        className="text-xs text-gold hover:text-gold-light transition-colors"
+                      >
+                        {showTags[show.id] ? "Oppdater" : "Last tagger"}
+                      </button>
+                    </div>
+                    {showTags[show.id] && showTags[show.id].length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {showTags[show.id].map((tag) => (
+                          <span key={tag} className="inline-flex items-center gap-1 rounded-lg bg-gold/[0.08] border border-gold/15 px-2.5 py-1 text-xs text-gold">
+                            {tag}
+                            <button
+                              onClick={() => handleRemoveTag(show.id, tag)}
+                              className="text-gold/60 hover:text-danger transition-colors ml-0.5"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Legg til tagger (kommadelt)..."
+                        value={tagInput[show.id] || ""}
+                        onChange={(e) => setTagInput((prev) => ({ ...prev, [show.id]: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && handleAddTag(show.id)}
+                        className={`${smallInputClass} flex-1`}
+                      />
+                      <button
+                        onClick={() => handleAddTag(show.id)}
+                        disabled={!tagInput[show.id]?.trim()}
+                        className="btn-gold rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
                   {show.teams.map((team) => (
                     <div key={team.id} className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4 space-y-3">
                       <div className="flex items-center justify-between">

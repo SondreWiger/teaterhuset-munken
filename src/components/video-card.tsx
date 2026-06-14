@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ReviewsSection } from "@/components/reviews-section";
+import { ChaptersSection } from "@/components/chapters-section";
 
 function extractYoutubeId(url: string): string | null {
   const match = url?.match(
@@ -318,6 +319,9 @@ export function VideoCard({
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-2 sm:p-4 md:p-8 animate-fade-in"
           onClick={() => setOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Spiller ${video.title}`}
         >
           <div
             ref={modalRef}
@@ -380,6 +384,7 @@ export function VideoCard({
             {/* Reviews */}
             {hasAccess && (
               <div className="mt-4 sm:mt-6">
+                <ChaptersSection videoId={video.id} />
                 <ReviewsSection videoId={video.id} />
               </div>
             )}
