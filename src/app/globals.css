@@ -20,10 +20,15 @@
 }
 
 /* ---- Base ---- */
+html {
+  overflow-x: hidden;
+}
+
 body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: hidden;
 }
 
 @layer base {
@@ -114,6 +119,7 @@ body {
 /* ---- Spotlight / radial gradients ---- */
 .spotlight {
   position: relative;
+  overflow: hidden;
 }
 
 .spotlight::before {
