@@ -23,7 +23,7 @@ export function ReviewsSection({ videoId }: { videoId: string }) {
   useEffect(() => {
     fetch(`/api/reviews?video_id=${videoId}`)
       .then((r) => r.json())
-      .then(setReviews)
+      .then((data) => setReviews(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
   }, [videoId]);
 

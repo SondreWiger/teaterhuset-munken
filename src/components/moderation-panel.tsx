@@ -24,7 +24,7 @@ export function ModerationPanel() {
   useEffect(() => {
     fetch("/api/reports")
       .then((r) => r.json())
-      .then(setReports)
+      .then((data) => setReports(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
   }, []);
 

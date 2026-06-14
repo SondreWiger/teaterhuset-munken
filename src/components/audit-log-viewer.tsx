@@ -42,7 +42,7 @@ export function AuditLogViewer() {
   useEffect(() => {
     fetch("/api/admin/audit-log")
       .then((r) => r.json())
-      .then(setLogs)
+      .then((data) => setLogs(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
   }, []);
 

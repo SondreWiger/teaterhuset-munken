@@ -16,7 +16,7 @@ export function NotificationManager() {
       fetch("/api/admin/notifications").then((r) => r.json()),
       fetch("/api/newsletter").then((r) => r.json()),
     ]).then(([notifs, subs]) => {
-      setHistory(notifs || []);
+      setHistory(Array.isArray(notifs) ? notifs : []);
       setSubscriberCount(Array.isArray(subs) ? subs.filter((s: any) => s.active).length : 0);
       setLoading(false);
     });

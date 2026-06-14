@@ -22,7 +22,7 @@ export function ChaptersSection({
   useEffect(() => {
     fetch(`/api/chapters?video_id=${videoId}`)
       .then((r) => r.json())
-      .then(setChapters)
+      .then((data) => setChapters(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
   }, [videoId]);
 

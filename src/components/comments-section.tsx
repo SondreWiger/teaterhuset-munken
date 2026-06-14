@@ -25,7 +25,7 @@ export function CommentsSection({ showId }: { showId: string }) {
   useEffect(() => {
     fetch(`/api/comments?show_id=${showId}`)
       .then((r) => r.json())
-      .then(setComments)
+      .then((data) => setComments(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
   }, [showId]);
 

@@ -28,7 +28,7 @@ export function GiftCardManager() {
   useEffect(() => {
     fetch("/api/gift-cards")
       .then((r) => r.json())
-      .then(setCards)
+      .then((data) => setCards(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
   }, []);
 
