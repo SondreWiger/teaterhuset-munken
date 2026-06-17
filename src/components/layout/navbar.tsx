@@ -37,7 +37,7 @@ export async function Navbar() {
             </Link>
             <div className="hidden sm:flex items-center gap-1">
               <Link
-                href="/"
+                href="/forestillinger"
                 className="px-4 py-2 text-sm text-muted hover:text-foreground rounded-lg hover:bg-white/[0.04] transition-all"
               >
                 Forestillinger

@@ -45,7 +45,7 @@ export function MobileNav({
           >
             <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
               <Link
-                href="/"
+                href="/forestillinger"
                 onClick={() => setOpen(false)}
                 className="px-4 py-3 text-sm text-muted hover:text-foreground rounded-xl hover:bg-white/[0.04] transition-all"
               >

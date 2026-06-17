@@ -63,7 +63,7 @@ export default function RootLayout({
                 </span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted">
-                <Link href="/" className="hover:text-foreground transition-colors">
+                <Link href="/forestillinger" className="hover:text-foreground transition-colors">
                   Forestillinger
                 </Link>
                 <Link href="/login" className="hover:text-foreground transition-colors">
