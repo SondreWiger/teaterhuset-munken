@@ -40,6 +40,10 @@ export default function RootLayout({
           Hopp til hovedinnhold
         </a>
         <Navbar />
+        {/* Disclaimer banner */}
+        <div className="bg-gold/[0.06] border-b border-gold/10 text-center px-4 py-2.5 text-xs sm:text-sm text-gold/80">
+          Dette er ikke den offisielle nettsiden til Teaterhuset Munken. Siden er under utvikling. Under utvikling bør du alltid bruke <strong>dev bypass</strong> ved kjøp.
+        </div>
         <main id="main-content" className="flex-1 pt-20" role="main">{children}</main>
         <Toaster
           theme="dark"
@@ -57,7 +61,6 @@ export default function RootLayout({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-gradient-gold">TP</span>
                 <span className="text-sm text-muted">
                   &copy; {new Date().getFullYear()} Teaterhuset Munken
                 </span>

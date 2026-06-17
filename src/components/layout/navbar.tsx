@@ -28,9 +28,6 @@ export async function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-10">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold to-gold-light flex items-center justify-center text-background text-sm font-black group-hover:shadow-lg group-hover:shadow-gold/20 transition-shadow">
-                TP
-              </div>
               <span className="text-lg font-bold tracking-tight hidden sm:block">
                 Teaterhuset Munken
               </span>
