@@ -45,7 +45,9 @@ function AuthForm() {
         });
         if (error) throw error;
         const redirect = searchParams.get("redirect") || "/dashboard";
-        router.push(redirect);
+        // Only allow relative paths to prevent open redirect
+        const safeRedirect = redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/dashboard";
+        router.push(safeRedirect);
         router.refresh();
       }
     } catch (err) {

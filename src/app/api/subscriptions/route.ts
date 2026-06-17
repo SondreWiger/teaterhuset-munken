@@ -22,44 +22,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { type } = await request.json();
-  if (!type || !["monthly", "yearly"].includes(type)) {
-    return NextResponse.json({ error: "type must be monthly or yearly" }, { status: 400 });
-  }
-
-  const now = new Date();
-  const endDate = new Date(now);
-  if (type === "monthly") endDate.setMonth(endDate.getMonth() + 1);
-  if (type === "yearly") endDate.setFullYear(endDate.getFullYear() + 1);
-
-  const price = type === "monthly" ? 99 : 990;
-
-  const adminDb = createAdminClient();
-
-  // Deactivate any existing subscriptions
-  await adminDb
-    .from("subscriptions")
-    .update({ active: false })
-    .eq("user_id", user.id)
-    .eq("active", true);
-
-  const { data, error } = await adminDb
-    .from("subscriptions")
-    .insert({
-      user_id: user.id,
-      type,
-      start_date: now.toISOString(),
-      end_date: endDate.toISOString(),
-      active: true,
-      price,
-    })
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json(
+    { error: "Abonnement kjøpes gjennom betalingsløsningen. Bruk dev bypass for testing." },
+    { status: 403 }
+  );
 }

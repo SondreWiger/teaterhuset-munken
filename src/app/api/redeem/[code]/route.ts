@@ -78,7 +78,8 @@ export async function GET(
       await adminDb
         .from("qr_codes")
         .update({ current_uses: qrCode.current_uses + 1 })
-        .eq("id", qrCode.id);
+        .eq("id", qrCode.id)
+        .eq("current_uses", qrCode.current_uses);
     }
 
     return NextResponse.redirect(new URL("/library?redeemed=true"));

@@ -20,9 +20,12 @@ export function FavoriteButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ video_id: videoId }),
       });
+      if (!res.ok) return;
       const data = await res.json();
       setFavorited(data.favorited);
-    } catch {}
+    } catch {
+      // Silently fail — button remains in previous state
+    }
     setLoading(false);
   };
 
@@ -35,6 +38,7 @@ export function FavoriteButton({
       }}
       disabled={loading}
       className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:bg-white/[0.06]"
+      aria-label={favorited ? "Fjern fra favoritter" : "Legg til favoritt"}
       title={favorited ? "Fjern fra favoritter" : "Legg til favoritt"}
     >
       <svg

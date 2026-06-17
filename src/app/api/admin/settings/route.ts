@@ -1,52 +1,43 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { checkAdmin } from "@/lib/admin";
 
 export async function PUT(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
-    }
-
-    const adminDb = createAdminClient();
-    const { data: profileList } = await adminDb
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id);
-
-    const profile = profileList?.[0];
-    if (!profile || profile.role !== "admin") {
-      return NextResponse.json({ error: "Ikke tilgang" }, { status: 403 });
-    }
+    const ctx = await checkAdmin();
+    if (!ctx) return NextResponse.json({ error: "Ikke tilgang" }, { status: 403 });
 
     const body = await request.json();
     const allowedKeys = [
       "site_name",
       "hero_title",
       "hero_subtitle",
-      "hero_image_url",
+      "hero_image",
+      "primary_color",
+      "accent_color",
     ];
 
+    const updates: Record<string, string> = {};
     for (const key of allowedKeys) {
-      if (body[key] !== undefined) {
-        const { error } = await adminDb.from("settings").upsert(
-          { key, value: String(body[key]) },
-          { onConflict: "key" }
-        );
-        if (error) {
-          console.error(`Error saving setting ${key}:`, error);
-        }
-      }
+      if (body[key] !== undefined) updates[key] = body[key];
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "Ingen data å oppdatere" }, { status: 400 });
+    }
+
+    const { error } = await ctx.adminDb.from("settings").upsert(
+      Object.entries(updates).map(([key, value]) => ({ key, value })),
+      { onConflict: "key" }
+    );
+
+    if (error) {
+      console.error("Settings update error:", error);
+      return NextResponse.json({ error: "Kunne ikke oppdatere innstillinger" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Settings API error:", error);
+    console.error("Settings error:", error);
     return NextResponse.json({ error: "Noe gikk galt" }, { status: 500 });
   }
 }

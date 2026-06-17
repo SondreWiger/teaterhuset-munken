@@ -27,11 +27,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Koden er brukt opp" }, { status: 400 });
   }
 
-  // Increment uses
+  // Direct update — safer than RPC which may not exist
   await adminDb
     .from("gift_cards")
     .update({ current_uses: card.current_uses + 1 })
-    .eq("id", card.id);
+    .eq("id", card.id)
+    .eq("current_uses", card.current_uses);
 
   return NextResponse.json({
     success: true,

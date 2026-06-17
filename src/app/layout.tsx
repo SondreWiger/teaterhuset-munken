@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 import { Navbar } from "@/components/layout/navbar";
 import { Toaster } from "sonner";
@@ -62,24 +63,24 @@ export default function RootLayout({
                 </span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted">
-                <a href="/" className="hover:text-foreground transition-colors">
+                <Link href="/" className="hover:text-foreground transition-colors">
                   Forestillinger
-                </a>
-                <a href="/login" className="hover:text-foreground transition-colors">
+                </Link>
+                <Link href="/login" className="hover:text-foreground transition-colors">
                   Logg inn
-                </a>
-                <a href="/about" className="hover:text-foreground transition-colors">
+                </Link>
+                <Link href="/about" className="hover:text-foreground transition-colors">
                   Om oss
-                </a>
-                <a href="/privacy" className="hover:text-foreground transition-colors">
+                </Link>
+                <Link href="/privacy" className="hover:text-foreground transition-colors">
                   Personvern
-                </a>
-                <a href="/terms" className="hover:text-foreground transition-colors">
+                </Link>
+                <Link href="/terms" className="hover:text-foreground transition-colors">
                   Vilkår
-                </a>
-                <a href="/cookies" className="hover:text-foreground transition-colors">
+                </Link>
+                <Link href="/cookies" className="hover:text-foreground transition-colors">
                   Informasjonskapsler
-                </a>
+                </Link>
               </div>
             </div>
           </div>

@@ -1,24 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { checkAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-async function checkAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const adminDb = createAdminClient();
-  const { data: profiles } = await adminDb
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id);
-  const profile = profiles?.[0];
-  if (!profile || profile.role !== "admin") return null;
-
-  return { user, adminDb };
-}
 
 export async function GET() {
   const adminDb = createAdminClient();

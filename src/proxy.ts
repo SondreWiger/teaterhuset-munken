@@ -4,28 +4,31 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value);
-          }
-          supabaseResponse = NextResponse.next({ request });
-          for (const { name, value, options } of cookiesToSet) {
-            supabaseResponse.cookies.set(name, value, options);
-          }
-        },
+  const supabase = createServerClient(url, anonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet) {
+        for (const { name, value } of cookiesToSet) {
+          request.cookies.set(name, value);
+        }
+        supabaseResponse = NextResponse.next({ request });
+        for (const { name, value, options } of cookiesToSet) {
+          supabaseResponse.cookies.set(name, value, options);
+        }
+      },
+    },
+  });
 
   const {
     data: { user },
@@ -44,27 +47,27 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isProtected && user) {
-    const adminDb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (serviceKey && url) {
+      const adminDb = createClient(url, serviceKey);
 
-    const adminPaths = ["/dashboard/admin"];
-    const isAdminPath = adminPaths.some((path) =>
-      request.nextUrl.pathname.startsWith(path)
-    );
+      const adminPaths = ["/dashboard/admin"];
+      const isAdminPath = adminPaths.some((path) =>
+        request.nextUrl.pathname.startsWith(path)
+      );
 
-    if (isAdminPath) {
-      const { data: profiles } = await adminDb
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id);
+      if (isAdminPath) {
+        const { data: profiles } = await adminDb
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id);
 
-      const profile = profiles?.[0];
-      if (!profile || profile.role !== "admin") {
-        const url = request.nextUrl.clone();
-        url.pathname = "/dashboard";
-        return NextResponse.redirect(url);
+        const profile = profiles?.[0];
+        if (!profile || profile.role !== "admin") {
+          const url = request.nextUrl.clone();
+          url.pathname = "/dashboard";
+          return NextResponse.redirect(url);
+        }
       }
     }
   }

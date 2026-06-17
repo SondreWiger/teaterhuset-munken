@@ -8,26 +8,32 @@ export async function GET(request: Request) {
   if (!showId) return NextResponse.json({ error: "show_id required" }, { status: 400 });
 
   const adminDb = createAdminClient();
-  const { data, error } = await adminDb
+
+  // Fetch all comments for this show in one query (top-level + replies)
+  const { data: allComments, error } = await adminDb
     .from("comments")
     .select("*, profiles:user_id(display_name, avatar_url)")
     .eq("show_id", showId)
-    .is("parent_id", null)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Fetch replies for each comment
-  const commentsWithReplies = await Promise.all(
-    (data || []).map(async (comment: any) => {
-      const { data: replies } = await adminDb
-        .from("comments")
-        .select("*, profiles:user_id(display_name, avatar_url)")
-        .eq("parent_id", comment.id)
-        .order("created_at", { ascending: true });
-      return { ...comment, replies: replies || [] };
-    })
-  );
+  // Group: top-level comments with nested replies
+  const topLevel = (allComments || []).filter((c: any) => !c.parent_id);
+  const replies = (allComments || []).filter((c: any) => c.parent_id);
+  const repliesByParent = new Map<string, any[]>();
+  replies.forEach((r: any) => {
+    const list = repliesByParent.get(r.parent_id) || [];
+    list.push(r);
+    repliesByParent.set(r.parent_id, list);
+  });
+
+  const commentsWithReplies = topLevel
+    .map((c: any) => ({
+      ...c,
+      replies: repliesByParent.get(c.id) || [],
+    }))
+    .reverse(); // newest first
 
   return NextResponse.json(commentsWithReplies);
 }
@@ -66,11 +72,22 @@ export async function DELETE(request: Request) {
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   const adminDb = createAdminClient();
+
+  // Verify ownership before delete
+  const { data: comment } = await adminDb
+    .from("comments")
+    .select("user_id")
+    .eq("id", id)
+    .single();
+
+  if (!comment || comment.user_id !== user.id) {
+    return NextResponse.json({ error: "Ikke tilgang" }, { status: 403 });
+  }
+
   const { error } = await adminDb
     .from("comments")
     .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
