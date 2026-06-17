@@ -99,6 +99,24 @@ export default async function ShowPage(props: {
     .select("tag")
     .eq("show_id", slug);
 
+  // Fetch actor overrides for this show's videos
+  const videoIds = show.teams?.flatMap((t: any) =>
+    (t.videos ?? []).map((v: any) => v.id)
+  ) || [];
+
+  let overridesMap: Record<string, Record<string, string>> = {};
+  if (videoIds.length > 0) {
+    const { data: overrides } = await adminDb
+      .from("video_actor_overrides")
+      .select("video_id, role_id, actor_name")
+      .in("video_id", videoIds);
+
+    overrides?.forEach((o: any) => {
+      if (!overridesMap[o.video_id]) overridesMap[o.video_id] = {};
+      overridesMap[o.video_id][o.role_id] = o.actor_name;
+    });
+  }
+
   const tags = showTags?.map((t: any) => t.tag) || [];
 
   return (
@@ -232,17 +250,47 @@ export default async function ShowPage(props: {
                     .sort((a: any, b: any) => a.sort_order - b.sort_order)
                     .map((video: any) => {
                       const hasAccess = purchasedVideoIds.has(video.id);
+                      const videoOverrides = overridesMap[video.id] || {};
+                      const teamRoleActors = (team.team_roles || [])
+                        .filter((tr: any) => tr.roles)
+                        .map((tr: any) => {
+                          const override = videoOverrides[tr.role_id];
+                          return {
+                            role: tr.roles.name,
+                            default: tr.actor_name,
+                            override: override || null,
+                          };
+                        })
+                        .filter((a: any) => a.default || a.override);
                       return (
-                        <VideoCard
-                          key={video.id}
-                          video={video}
-                          hasAccess={hasAccess}
-                          teamColor={team.color}
-                        >
-                          {!hasAccess && (
-                            <BuyButton video={video} user={user} />
+                        <div key={video.id}>
+                          <VideoCard
+                            video={video}
+                            hasAccess={hasAccess}
+                            teamColor={team.color}
+                          >
+                            {!hasAccess && (
+                              <BuyButton video={video} user={user} />
+                            )}
+                          </VideoCard>
+                          {teamRoleActors.length > 0 && (
+                            <div className="mt-1.5 ml-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                              {teamRoleActors.map((a: any, i: number) => (
+                                <span key={i} className="text-[11px] text-muted">
+                                  {a.override ? (
+                                    <>
+                                      <span className="line-through opacity-50">{a.default}</span>
+                                      {" "}
+                                      <span className="text-gold">{a.override}</span>
+                                    </>
+                                  ) : (
+                                    a.default
+                                  )}
+                                </span>
+                              ))}
+                            </div>
                           )}
-                        </VideoCard>
+                        </div>
                       );
                     })}
                 </div>

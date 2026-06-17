@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { ActorOverridePanel } from "@/components/actor-override-panel";
 
 interface Video {
   id: string;
@@ -94,6 +95,7 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
   const [roleFormName, setRoleFormName] = useState("");
   const [expandedTeamRoles, setExpandedTeamRoles] = useState<string | null>(null);
   const [roleAssignForm, setRoleAssignForm] = useState({ role_id: "", actor_name: "" });
+  const [expandedOverrides, setExpandedOverrides] = useState<string | null>(null);
 
   const loadRoles = async () => {
     try {
@@ -890,6 +892,51 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
                         <span>+ Lag</span>
                       </button>
                     </div>
+                  </div>
+
+                  {/* Actor overrides */}
+                  <div className="border-t border-white/[0.04] pt-4 mt-2">
+                    <button
+                      onClick={() =>
+                        setExpandedOverrides(
+                          expandedOverrides === show.id ? null : show.id
+                        )
+                      }
+                      className="flex items-center gap-2 text-xs text-gold hover:text-gold-light transition-colors"
+                    >
+                      <svg
+                        className={`w-3.5 h-3.5 transition-transform ${expandedOverrides === show.id ? "rotate-90" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                      Skuespiller-overridinger (vikar per video)
+                    </button>
+
+                    {expandedOverrides === show.id && (
+                      <div className="mt-4">
+                        <ActorOverridePanel
+                          showId={show.id}
+                          teamRoles={show.teams.flatMap((team) =>
+                            (team.team_roles || []).flatMap((tr) =>
+                              (team.videos || []).map((v) => ({
+                                video_id: v.id,
+                                video_title: v.title,
+                                team_id: team.id,
+                                team_name: team.name,
+                                team_color: team.color,
+                                role_id: tr.role_id,
+                                role_name: tr.roles.name,
+                                default_actor: tr.actor_name,
+                              }))
+                            )
+                          )}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
