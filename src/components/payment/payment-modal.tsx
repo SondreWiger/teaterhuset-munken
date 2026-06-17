@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 
 export function PaymentModal({
   video,
@@ -12,6 +13,15 @@ export function PaymentModal({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   const handleDevBypass = async () => {
     setLoading(true);
@@ -30,13 +40,16 @@ export function PaymentModal({
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm sm:p-4 animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl glass border border-white/[0.08] shadow-2xl shadow-black/50 animate-slide-in sm:animate-slide-in safe-bottom"
+        className="w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl border border-white/[0.08] shadow-2xl shadow-black/50 bg-[#0f0f15] safe-bottom"
+        style={{ backdropFilter: "none" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle (mobile) */}
@@ -96,7 +109,7 @@ export function PaymentModal({
               <div className="w-full h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-card/80 backdrop-blur-sm px-3 text-xs text-muted">
+              <span className="bg-[#0f0f15] px-3 text-xs text-muted">
                 eller
               </span>
             </div>
@@ -114,6 +127,8 @@ export function PaymentModal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
 
 function VippsLogo() {
@@ -186,7 +201,7 @@ function PayPalInline({
       <button
         onClick={handlePayPal}
         disabled={loading}
-        className="w-full rounded-xl glass-card px-4 py-4 sm:py-3.5 text-sm font-medium text-foreground hover:bg-white/[0.04] transition-colors disabled:opacity-50 flex items-center justify-center gap-2.5 touch-target"
+        className="w-full rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-4 sm:py-3.5 text-sm font-medium text-foreground hover:bg-white/[0.06] transition-colors disabled:opacity-50 flex items-center justify-center gap-2.5 touch-target"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M20.067 8.478c.492.88.556 2.014.3 3.327-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 00-.794.68l-.04.22-.63 3.993-.032.17a.804.804 0 01-.794.679H7.72a.483.483 0 01-.477-.558l.001-.01.43-2.726a.806.806 0 01.794-.679h.5c3.238 0 5.774-1.314 6.514-5.12.34-1.545.255-2.764-.468-3.622a3.446 3.446 0 00-.32-.323l.001-.001-.004-.004zM14.876 5.178H8.34a.806.806 0 00-.794.679L6.59 10.99a.483.483 0 00.477.558h.733c1.912 0 3.33-.574 4.038-1.69.16-.253.293-.537.399-.847.566-1.645.466-3.025-.74-3.853z" />

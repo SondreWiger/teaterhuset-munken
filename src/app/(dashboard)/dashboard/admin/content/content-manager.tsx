@@ -11,6 +11,7 @@ interface Video {
   description: string | null;
   youtube_url: string | null;
   vimeo_url: string | null;
+  trailer_url: string | null;
   price: number;
   sort_order: number;
   published: boolean;
@@ -53,8 +54,8 @@ interface Show {
 
 export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
   const [shows, setShows] = useState(initialShows);
-  const [activeTab, setActiveTab] = useState<"shows" | "add-show">("shows");
-  const [expandedShow, setExpandedShow] = useState<string | null>(null);
+  const [selectedShowId, setSelectedShowId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"teams" | "roles" | "tags" | "overrides">("teams");
   const [loading, setLoading] = useState(false);
 
   const [showForm, setShowForm] = useState({
@@ -66,44 +67,27 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     publish_at: "",
     bundle_price: "",
   });
+  const [showFormOpen, setShowFormOpen] = useState(false);
 
-  const [teamForm, setTeamForm] = useState({
-    show_id: "",
-    name: "",
-    color: "#a855f7",
-    description: "",
-  });
+  const selectedShow = shows.find((s) => s.id === selectedShowId);
 
-  const [videoForm, setVideoForm] = useState({
-    team_id: "",
-    title: "",
-    description: "",
-    youtube_url: "",
-    vimeo_url: "",
-    trailer_url: "",
-    price: 0,
-    sort_order: 0,
-    published: false,
-  });
-
-  const [editingVideo, setEditingVideo] = useState<string | null>(null);
-  const [editingTeam, setEditingTeam] = useState<string | null>(null);
-  const [showTags, setShowTags] = useState<Record<string, string[]>>({});
-  const [tagInput, setTagInput] = useState<Record<string, string>>({});
+  const [teamForm, setTeamForm] = useState({ name: "", color: "#a855f7" });
+  const [videoForm, setVideoForm] = useState<{
+    team_id: string;
+    title: string;
+    youtube_url: string;
+    vimeo_url: string;
+    trailer_url: string;
+    price: number;
+    sort_order: number;
+    published: boolean;
+  } | null>(null);
 
   const [allRoles, setAllRoles] = useState<Role[]>([]);
-  const [roleFormName, setRoleFormName] = useState("");
-  const [expandedTeamRoles, setExpandedTeamRoles] = useState<string | null>(null);
   const [roleAssignForm, setRoleAssignForm] = useState({ role_id: "", actor_name: "" });
-  const [expandedOverrides, setExpandedOverrides] = useState<string | null>(null);
-
-  const loadRoles = async () => {
-    try {
-      const res = await fetch("/api/admin/content/role");
-      const data = await res.json();
-      setAllRoles(data);
-    } catch {}
-  };
+  const [roleFormName, setRoleFormName] = useState("");
+  const [showTags, setShowTags] = useState<Record<string, string[]>>({});
+  const [tagInput, setTagInput] = useState("");
 
   const api = async (path: string, method: string, body?: any) => {
     const res = await fetch(path, {
@@ -116,37 +100,9 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     return data;
   };
 
-  const handleAddTag = async (showId: string) => {
-    const input = tagInput[showId] || "";
-    if (!input.trim()) return;
-    const existing = showTags[showId] || [];
-    const newTags = [...existing, ...input.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)];
-    try {
-      await api("/api/tags", "POST", { show_id: showId, tags: newTags });
-      setShowTags((prev) => ({ ...prev, [showId]: newTags }));
-      setTagInput((prev) => ({ ...prev, [showId]: "" }));
-      toast.success("Tagg oppdatert!");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Feil");
-    }
-  };
+  const reload = () => window.location.reload();
 
-  const handleRemoveTag = async (showId: string, tag: string) => {
-    const existing = (showTags[showId] || []).filter((t) => t !== tag);
-    try {
-      await api("/api/tags", "POST", { show_id: showId, tags: existing });
-      setShowTags((prev) => ({ ...prev, [showId]: existing }));
-      toast.success("Tagg fjernet!");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Feil");
-    }
-  };
-
-  const loadTags = async (showId: string) => {
-    const tags = await api(`/api/tags?show_id=${showId}`, "GET");
-    setShowTags((prev) => ({ ...prev, [showId]: tags.map((t: any) => t.tag) }));
-  };
-
+  // --- Show CRUD ---
   const handleCreateShow = async () => {
     if (!showForm.title) return;
     setLoading(true);
@@ -158,7 +114,8 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
       });
       toast.success("Forestilling opprettet!");
       setShowForm({ title: "", description: "", image_url: "", year: new Date().getFullYear(), published: false, publish_at: "", bundle_price: "" });
-      window.location.reload();
+      setShowFormOpen(false);
+      reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     } finally {
@@ -167,12 +124,13 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
   };
 
   const handleDeleteShow = async (id: string) => {
-    if (!confirm("Er du sikker på at du vil slette denne forestillingen og alt innholdet?")) return;
+    if (!confirm("Slette denne forestillingen og alt innholdet?")) return;
     setLoading(true);
     try {
       await api(`/api/admin/content/show?id=${id}`, "DELETE");
-      toast.success("Forestilling slettet!");
-      window.location.reload();
+      toast.success("Slettet!");
+      setSelectedShowId(null);
+      reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     } finally {
@@ -183,21 +141,22 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
   const handleToggleShow = async (id: string, published: boolean) => {
     try {
       await api("/api/admin/content/show", "PATCH", { id, published });
+      setShows((prev) => prev.map((s) => s.id === id ? { ...s, published } : s));
       toast.success(published ? "Publisert!" : "Skjult!");
-      window.location.reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     }
   };
 
+  // --- Team CRUD ---
   const handleCreateTeam = async () => {
-    if (!teamForm.name || !teamForm.show_id) return;
+    if (!teamForm.name || !selectedShowId) return;
     setLoading(true);
     try {
-      await api("/api/admin/content/team", "POST", teamForm);
+      await api("/api/admin/content/team", "POST", { ...teamForm, show_id: selectedShowId });
       toast.success("Lag opprettet!");
-      setTeamForm({ show_id: "", name: "", color: "#a855f7", description: "" });
-      window.location.reload();
+      setTeamForm({ name: "", color: "#a855f7" });
+      reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     } finally {
@@ -206,12 +165,12 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
   };
 
   const handleDeleteTeam = async (id: string) => {
-    if (!confirm("Slette dette laget og alle videoene?")) return;
+    if (!confirm("Slette laget og alle videoene?")) return;
     setLoading(true);
     try {
       await api(`/api/admin/content/team?id=${id}`, "DELETE");
-      toast.success("Lag slettet!");
-      window.location.reload();
+      toast.success("Slettet!");
+      reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     } finally {
@@ -219,24 +178,15 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     }
   };
 
+  // --- Video CRUD ---
   const handleCreateVideo = async () => {
-    if (!videoForm.title || !videoForm.team_id) return;
+    if (!videoForm?.title || !videoForm.team_id) return;
     setLoading(true);
     try {
       await api("/api/admin/content/video", "POST", videoForm);
-      toast.success("Video opprettet!");
-      setVideoForm({
-        team_id: "",
-        title: "",
-        description: "",
-        youtube_url: "",
-        vimeo_url: "",
-        trailer_url: "",
-        price: 0,
-        sort_order: 0,
-        published: false,
-      });
-      window.location.reload();
+      toast.success("Video lagt til!");
+      setVideoForm(null);
+      reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     } finally {
@@ -245,12 +195,12 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
   };
 
   const handleDeleteVideo = async (id: string) => {
-    if (!confirm("Slette denne videoen?")) return;
+    if (!confirm("Slette videoen?")) return;
     setLoading(true);
     try {
       await api(`/api/admin/content/video?id=${id}`, "DELETE");
-      toast.success("Video slettet!");
-      window.location.reload();
+      toast.success("Slettet!");
+      reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     } finally {
@@ -261,11 +211,25 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
   const handleToggleVideo = async (id: string, published: boolean) => {
     try {
       await api("/api/admin/content/video", "PATCH", { id, published });
-      toast.success(published ? "Publisert!" : "Skjult!");
-      window.location.reload();
+      setShows((prev) =>
+        prev.map((s) => ({
+          ...s,
+          teams: s.teams.map((t) => ({
+            ...t,
+            videos: t.videos.map((v) => v.id === id ? { ...v, published } : v),
+          })),
+        }))
+      );
+      toast.success(published ? "Synlig!" : "Skjult!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     }
+  };
+
+  // --- Roles ---
+  const loadRoles = async () => {
+    const data = await api("/api/admin/content/role", "GET");
+    setAllRoles(data);
   };
 
   const handleCreateRole = async () => {
@@ -295,18 +259,15 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
       const roleData = allRoles.find((r) => r.id === roleAssignForm.role_id);
       const newTeamRole = { ...data, roles: roleData! };
       setShows((prev) =>
-        prev.map((show) => ({
-          ...show,
-          teams: show.teams.map((team) =>
-            team.id === teamId
-              ? { ...team, team_roles: [...team.team_roles, newTeamRole] }
-              : team
+        prev.map((s) => ({
+          ...s,
+          teams: s.teams.map((t) =>
+            t.id === teamId ? { ...t, team_roles: [...t.team_roles, newTeamRole] } : t
           ),
         }))
       );
       toast.success("Rolle tildelt!");
       setRoleAssignForm({ role_id: "", actor_name: "" });
-      setExpandedTeamRoles(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     } finally {
@@ -319,15 +280,15 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     try {
       await api(`/api/admin/content/team-role?id=${teamRoleId}`, "DELETE");
       setShows((prev) =>
-        prev.map((show) => ({
-          ...show,
-          teams: show.teams.map((team) => ({
-            ...team,
-            team_roles: team.team_roles.filter((tr) => tr.id !== teamRoleId),
+        prev.map((s) => ({
+          ...s,
+          teams: s.teams.map((t) => ({
+            ...t,
+            team_roles: t.team_roles.filter((tr) => tr.id !== teamRoleId),
           })),
         }))
       );
-      toast.success("Rolle fjernet!");
+      toast.success("Fjernet!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     } finally {
@@ -335,615 +296,512 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     }
   };
 
-  const inputClass =
-    "w-full rounded-xl input-glass px-4 py-3 text-sm";
-  const smallInputClass =
-    "rounded-lg input-glass px-3 py-2 text-sm";
+  // --- Tags ---
+  const loadTags = async (showId: string) => {
+    const data = await api(`/api/tags?show_id=${showId}`, "GET");
+    setShowTags((prev) => ({ ...prev, [showId]: data.map((t: any) => t.tag) }));
+  };
+
+  const handleAddTag = async () => {
+    if (!selectedShowId || !tagInput.trim()) return;
+    const newTags = [...(showTags[selectedShowId] || []), ...tagInput.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)];
+    try {
+      await api("/api/tags", "POST", { show_id: selectedShowId, tags: newTags });
+      setShowTags((prev) => ({ ...prev, [selectedShowId]: newTags }));
+      setTagInput("");
+      toast.success("Tagg oppdatert!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Feil");
+    }
+  };
+
+  const handleRemoveTag = async (tag: string) => {
+    if (!selectedShowId) return;
+    const existing = (showTags[selectedShowId] || []).filter((t) => t !== tag);
+    try {
+      await api("/api/tags", "POST", { show_id: selectedShowId, tags: existing });
+      setShowTags((prev) => ({ ...prev, [selectedShowId]: existing }));
+      toast.success("Fjernet!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Feil");
+    }
+  };
+
+  const inputClass = "w-full rounded-xl input-glass px-4 py-3 text-sm";
+  const smInput = "rounded-lg input-glass px-3 py-2 text-sm";
+
+  const tabs = [
+    { id: "teams" as const, label: "Lag & Videoer" },
+    { id: "roles" as const, label: "Roller" },
+    { id: "tags" as const, label: "Tagger" },
+    { id: "overrides" as const, label: "Vikar" },
+  ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex gap-2 border-b border-border/50 pb-2">
-        <button
-          onClick={() => setActiveTab("shows")}
-          className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-all ${
-            activeTab === "shows"
-              ? "btn-gold"
-              : "text-muted hover:text-foreground hover:bg-white/[0.04]"
-          }`}
-        >
-          Forestillinger
-        </button>
-        <button
-          onClick={() => setActiveTab("add-show")}
-          className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-all ${
-            activeTab === "add-show"
-              ? "btn-gold"
-              : "text-muted hover:text-foreground hover:bg-white/[0.04]"
-          }`}
-        >
-          + Ny forestilling
-        </button>
-      </div>
-
-      {activeTab === "add-show" && (
-        <div className="glass-card rounded-2xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-foreground/90">Ny forestilling</h2>
-          <input
-            type="text"
-            placeholder="Tittel"
-            value={showForm.title}
-            onChange={(e) => setShowForm({ ...showForm, title: e.target.value })}
-            className={inputClass}
-          />
-          <textarea
-            placeholder="Beskrivelse (valgfritt)"
-            value={showForm.description}
-            onChange={(e) =>
-              setShowForm({ ...showForm, description: e.target.value })
-            }
-            rows={3}
-            className={inputClass}
-          />
-          <input
-            type="url"
-            placeholder="Bilde-URL (valgfritt)"
-            value={showForm.image_url}
-            onChange={(e) =>
-              setShowForm({ ...showForm, image_url: e.target.value })
-            }
-            className={inputClass}
-          />
-          <input
-            type="number"
-            placeholder="År"
-            value={showForm.year}
-            onChange={(e) =>
-              setShowForm({ ...showForm, year: Number(e.target.value) })
-            }
-            min={1900}
-            max={2100}
-            className={inputClass}
-          />
-          <input
-            type="datetime-local"
-            placeholder="Publiseringsdato (valgfritt)"
-            value={showForm.publish_at}
-            onChange={(e) =>
-              setShowForm({ ...showForm, publish_at: e.target.value })
-            }
-            className={inputClass}
-          />
-          <p className="text-xs text-muted -mt-2">
-            Hvis satt, vises forestillingen bare etter denne datoen.
-          </p>
-          <input
-            type="number"
-            placeholder="Pakkepris for hele forestillingen (valgfritt, kr)"
-            value={showForm.bundle_price}
-            onChange={(e) =>
-              setShowForm({ ...showForm, bundle_price: e.target.value })
-            }
-            className={inputClass}
-          />
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={showForm.published}
-              onChange={(e) =>
-                setShowForm({ ...showForm, published: e.target.checked })
-              }
-              className="rounded border-border"
-            />
-            Publisert (synlig på forsiden)
-          </label>
+    <div className="flex gap-6 min-h-[60vh]">
+      {/* Sidebar — show list */}
+      <div className="w-64 shrink-0 space-y-2">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Forestillinger</h2>
           <button
-            onClick={handleCreateShow}
-            disabled={loading || !showForm.title}
-            className="btn-gold rounded-xl px-6 py-2.5 text-sm font-semibold disabled:opacity-50"
+            onClick={() => setShowFormOpen(!showFormOpen)}
+            className="w-8 h-8 rounded-lg bg-gold/10 text-gold hover:bg-gold/20 transition-colors flex items-center justify-center text-lg font-bold"
           >
-            {loading ? "Oppretter..." : "Opprett forestilling"}
+            +
           </button>
         </div>
-      )}
 
-      {activeTab === "shows" && (
-        <div className="space-y-4">
-          {shows.length === 0 && (
-            <p className="text-center text-muted py-12">
-              Ingen forestillinger ennå. Klikk &quot;+ Ny forestilling&quot; for å komme i gang.
-            </p>
-          )}
-
-          {shows.map((show) => (
-            <div
-              key={show.id}
-              className="glass-card rounded-2xl overflow-hidden"
-            >
-              <div
-                className="flex items-center justify-between p-5 cursor-pointer hover:bg-white/[0.02] transition-colors"
-                onClick={() => {
-                  setExpandedShow(expandedShow === show.id ? null : show.id);
-                  if (expandedShow !== show.id) loadTags(show.id);
-                }}
+        {showFormOpen && (
+          <div className="glass-card rounded-xl p-3 space-y-2 mb-3">
+            <input
+              type="text"
+              placeholder="Tittel"
+              value={showForm.title}
+              onChange={(e) => setShowForm({ ...showForm, title: e.target.value })}
+              className={smInput}
+            />
+            <input
+              type="number"
+              placeholder="År"
+              value={showForm.year}
+              onChange={(e) => setShowForm({ ...showForm, year: Number(e.target.value) })}
+              className={smInput}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreateShow}
+                disabled={loading || !showForm.title}
+                className="btn-gold rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
               >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`text-muted text-sm transition-transform ${
-                      expandedShow === show.id ? "rotate-90" : ""
-                    }`}
-                  >
-                    ▶
-                  </span>
-                  <div>
-                    <h3 className="font-semibold">{show.title}</h3>
-                    <p className="text-xs text-muted">
-                      {show.teams.length} lag ·{" "}
-                      {show.teams.reduce(
-                        (acc, t) => acc + t.videos.length,
-                        0
-                      )}{" "}
-                      videoer
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      show.published
-                        ? "bg-success/10 text-success"
-                        : "bg-muted/10 text-muted"
-                    }`}
-                  >
-                    {show.published ? "Publisert" : "Utkast"}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleShow(show.id, !show.published);
-                    }}
-                    className="text-xs text-muted hover:text-foreground transition-colors px-2 py-1"
-                  >
-                    {show.published ? "Skjul" : "Publiser"}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteShow(show.id);
-                    }}
-                    className="text-xs text-danger hover:text-danger/80 transition-colors px-2 py-1"
-                  >
-                    Slett
-                  </button>
-                </div>
+                Opprett
+              </button>
+              <button
+                onClick={() => setShowFormOpen(false)}
+                className="text-xs text-muted hover:text-foreground px-2 py-1.5"
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-1">
+          {shows.map((show) => (
+            <button
+              key={show.id}
+              onClick={() => {
+                setSelectedShowId(show.id);
+                setActiveTab("teams");
+                loadTags(show.id);
+              }}
+              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all ${
+                selectedShowId === show.id
+                  ? "bg-gold/10 text-gold border border-gold/15"
+                  : "text-muted hover:text-foreground hover:bg-white/[0.04] border border-transparent"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-medium truncate">{show.title}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                  show.published ? "bg-success/10 text-success" : "bg-white/[0.06] text-muted"
+                }`}>
+                  {show.published ? "✓" : "·"}
+                </span>
               </div>
+              <p className="text-xs text-muted mt-0.5">
+                {show.year} · {show.teams.length} lag
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
 
-              {expandedShow === show.id && (
-                <div className="border-t border-white/[0.04] p-5 space-y-6">
-                  {/* Tags section */}
-                  <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-xs font-medium text-muted">Tagger for søk og relaterede forestillinger</h5>
-                      <button
-                        onClick={() => loadTags(show.id)}
-                        className="text-xs text-gold hover:text-gold-light transition-colors"
-                      >
-                        {showTags[show.id] ? "Oppdater" : "Last tagger"}
-                      </button>
-                    </div>
-                    {showTags[show.id] && showTags[show.id].length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {showTags[show.id].map((tag) => (
-                          <span key={tag} className="inline-flex items-center gap-1 rounded-lg bg-gold/[0.08] border border-gold/15 px-2.5 py-1 text-xs text-gold">
-                            {tag}
-                            <button
-                              onClick={() => handleRemoveTag(show.id, tag)}
-                              className="text-gold/60 hover:text-danger transition-colors ml-0.5"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
+      {/* Main content */}
+      <div className="flex-1 min-w-0">
+        {!selectedShow ? (
+          <div className="flex items-center justify-center h-full text-muted text-sm">
+            Velg en forestilling fra listen
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Show header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold">{selectedShow.title}</h2>
+                <p className="text-sm text-muted">{selectedShow.year}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleToggleShow(selectedShow.id, !selectedShow.published)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    selectedShow.published
+                      ? "bg-success/10 text-success hover:bg-success/20"
+                      : "bg-white/[0.06] text-muted hover:text-foreground"
+                  }`}
+                >
+                  {selectedShow.published ? "Publisert" : "Utkast"}
+                </button>
+                <button
+                  onClick={() => handleDeleteShow(selectedShow.id)}
+                  className="px-3 py-1.5 rounded-lg text-xs text-danger/70 hover:text-danger hover:bg-danger/10 transition-colors"
+                >
+                  Slett
+                </button>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 border-b border-white/[0.06] pb-px">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                    activeTab === tab.id
+                      ? "text-gold border-b-2 border-gold -mb-px"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab: Teams & Videos */}
+            {activeTab === "teams" && (
+              <div className="space-y-6">
+                {selectedShow.teams.map((team) => (
+                  <div key={team.id} className="glass-card rounded-xl overflow-hidden">
+                    {/* Team header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04]">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.color }} />
+                        <span className="font-medium text-sm" style={{ color: team.color }}>
+                          {team.name}
+                        </span>
+                        <span className="text-xs text-muted">{team.videos.length} videoer</span>
                       </div>
-                    )}
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Legg til tagger (kommadelt)..."
-                        value={tagInput[show.id] || ""}
-                        onChange={(e) => setTagInput((prev) => ({ ...prev, [show.id]: e.target.value }))}
-                        onKeyDown={(e) => e.key === "Enter" && handleAddTag(show.id)}
-                        className={`${smallInputClass} flex-1`}
-                      />
-                      <button
-                        onClick={() => handleAddTag(show.id)}
-                        disabled={!tagInput[show.id]?.trim()}
-                        className="btn-gold rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {show.teams.map((team) => (
-                    <div key={team.id} className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: team.color }}
-                          />
-                          <h4 className="font-medium">{team.name}</h4>
-                          <span className="text-xs text-muted">
-                            {team.videos.length} videoer
-                          </span>
-                        </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            if (videoForm?.team_id === team.id) {
+                              setVideoForm(null);
+                            } else {
+                              setVideoForm({
+                                team_id: team.id,
+                                title: "",
+                                youtube_url: "",
+                                vimeo_url: "",
+                                trailer_url: "",
+                                price: 0,
+                                sort_order: team.videos.length,
+                                published: false,
+                              });
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs transition-colors ${
+                            videoForm?.team_id === team.id
+                              ? "bg-gold/10 text-gold"
+                              : "text-gold hover:bg-gold/10"
+                          }`}
+                        >
+                          {videoForm?.team_id === team.id ? "Lukk" : "+ Video"}
+                        </button>
                         <button
                           onClick={() => handleDeleteTeam(team.id)}
-                          className="text-xs text-danger hover:text-danger/80 transition-colors"
+                          className="px-2 py-1 text-xs text-danger/60 hover:text-danger transition-colors"
                         >
-                          Slett lag
+                          Slett
                         </button>
                       </div>
+                    </div>
 
-                      {team.videos.map((video) => (
-                        <div
-                          key={video.id}
-                          className="flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2.5 text-sm"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`w-2 h-2 rounded-full ${
-                                video.published ? "bg-success" : "bg-muted"
-                              }`}
-                            />
-                            <span>{video.title}</span>
-                            <span className="text-xs text-muted">
-                              {video.price} kr
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() =>
-                                handleToggleVideo(video.id, !video.published)
-                              }
-                              className="text-xs text-muted hover:text-foreground transition-colors"
-                            >
-                              {video.published ? "Skjul" : "Vis"}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteVideo(video.id)}
-                              className="text-xs text-danger hover:text-danger/80 transition-colors"
-                            >
-                              Slett
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-
-                      {/* Roles section */}
-                      <div className="border-t border-white/[0.04] pt-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <h5 className="text-xs font-medium text-muted">
-                            Roller i {team.name}
-                          </h5>
-                          <button
-                            onClick={() => {
-                              loadRoles();
-                              setExpandedTeamRoles(expandedTeamRoles === team.id ? null : team.id);
-                            }}
-                            className="text-xs text-gold hover:text-gold-light transition-colors"
-                          >
-                            {expandedTeamRoles === team.id ? "Lukk" : "+ Tildel rolle"}
-                          </button>
-                        </div>
-
-                        {team.team_roles && team.team_roles.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            {team.team_roles.map((tr: TeamRole) => (
-                              <span
-                                key={tr.id}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.03] border border-white/[0.04] px-2.5 py-1.5 text-xs"
-                              >
-                                <span className="font-medium">{tr.roles.name}</span>
-                                {tr.actor_name && (
-                                  <span className="text-muted">({tr.actor_name})</span>
-                                )}
+                    {/* Video list */}
+                    <div className="divide-y divide-white/[0.04]">
+                      {team.videos.length === 0 ? (
+                        <p className="px-4 py-6 text-xs text-muted text-center">
+                          Ingen videoer ennå
+                        </p>
+                      ) : (
+                        team.videos
+                          .sort((a, b) => a.sort_order - b.sort_order)
+                          .map((video) => (
+                            <div key={video.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${video.published ? "bg-success" : "bg-muted/40"}`} />
+                                <span className="text-sm truncate">{video.title}</span>
+                                <span className="text-xs text-muted shrink-0">{video.price} kr</span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
                                 <button
-                                  onClick={() => handleRemoveRole(tr.id)}
-                                  className="text-muted hover:text-danger transition-colors ml-1"
+                                  onClick={() => handleToggleVideo(video.id, !video.published)}
+                                  className="text-xs text-muted hover:text-foreground px-2 py-1 transition-colors"
                                 >
-                                  ×
+                                  {video.published ? "Skjul" : "Vis"}
                                 </button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {expandedTeamRoles === team.id && (
-                          <div className="mt-2 rounded-lg bg-white/[0.02] border border-white/[0.04] p-3 space-y-2">
-                            <select
-                              value={roleAssignForm.role_id}
-                              onChange={(e) =>
-                                setRoleAssignForm({ ...roleAssignForm, role_id: e.target.value })
-                              }
-                              className="w-full rounded-lg input-glass px-3 py-2 text-xs"
-                            >
-                              <option value="">Velg rolle...</option>
-                              {allRoles.map((role) => (
-                                <option key={role.id} value={role.id}>
-                                  {role.name}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                placeholder="Skuespiller (valgfritt)"
-                                value={roleAssignForm.actor_name}
-                                onChange={(e) =>
-                                  setRoleAssignForm({ ...roleAssignForm, actor_name: e.target.value })
-                                }
-                                className={`${smallInputClass} flex-1`}
-                              />
-                              <button
-                                onClick={() => handleAssignRole(team.id)}
-                                disabled={loading || !roleAssignForm.role_id}
-                                className="btn-gold rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-                              >
-                                <span>Tildel</span>
-                              </button>
+                                <button
+                                  onClick={() => handleDeleteVideo(video.id)}
+                                  className="text-xs text-danger/60 hover:text-danger px-2 py-1 transition-colors"
+                                >
+                                  Slett
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                placeholder="Eller lag ny rolle..."
-                                value={roleFormName}
-                                onChange={(e) => setRoleFormName(e.target.value)}
-                                className={`${smallInputClass} flex-1`}
-                              />
-                              <button
-                                onClick={handleCreateRole}
-                                disabled={loading || !roleFormName.trim()}
-                                className="rounded-lg border border-white/[0.06] px-3 py-1.5 text-xs text-muted hover:text-foreground hover:border-gold/20 transition-all disabled:opacity-50"
-                              >
-                                + Ny
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                          ))
+                      )}
+                    </div>
 
-                      <div className="bg-white/[0.02] rounded-lg p-3 space-y-2 border border-white/[0.04]">
-                        <h5 className="text-xs font-medium text-muted">
-                          Legg til video i {team.name}
-                        </h5>
+                    {/* Add video form */}
+                    {videoForm?.team_id === team.id && (
+                      <div className="border-t border-white/[0.04] px-4 py-3 bg-white/[0.02] space-y-2">
                         <input
                           type="text"
                           placeholder="Videonavn"
-                          value={editingTeam === team.id ? videoForm.title : ""}
-                          onFocus={() => {
-                            setEditingTeam(team.id);
-                            setVideoForm({ ...videoForm, team_id: team.id });
-                          }}
-                          onChange={(e) =>
-                            setVideoForm({ ...videoForm, title: e.target.value })
-                          }
-                          className={smallInputClass}
+                          value={videoForm.title}
+                          onChange={(e) => setVideoForm({ ...videoForm, title: e.target.value })}
+                          className={smInput}
+                          autoFocus
                         />
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <input
                             type="url"
                             placeholder="YouTube URL"
-                            value={
-                              editingTeam === team.id ? videoForm.youtube_url : ""
-                            }
-                            onFocus={() => {
-                              setEditingTeam(team.id);
-                              setVideoForm({ ...videoForm, team_id: team.id });
-                            }}
-                            onChange={(e) =>
-                              setVideoForm({
-                                ...videoForm,
-                                youtube_url: e.target.value,
-                              })
-                            }
-                            className={`${smallInputClass} flex-1`}
+                            value={videoForm.youtube_url}
+                            onChange={(e) => setVideoForm({ ...videoForm, youtube_url: e.target.value })}
+                            className={smInput}
                           />
                           <input
                             type="url"
                             placeholder="Vimeo URL"
-                            value={
-                              editingTeam === team.id ? videoForm.vimeo_url : ""
-                            }
-                            onFocus={() => {
-                              setEditingTeam(team.id);
-                              setVideoForm({ ...videoForm, team_id: team.id });
-                            }}
-                            onChange={(e) =>
-                              setVideoForm({
-                                ...videoForm,
-                                vimeo_url: e.target.value,
-                              })
-                            }
-                            className={`${smallInputClass} flex-1`}
+                            value={videoForm.vimeo_url}
+                            onChange={(e) => setVideoForm({ ...videoForm, vimeo_url: e.target.value })}
+                            className={smInput}
                           />
                         </div>
-                        <div className="flex gap-2">
-                          <input
-                            type="url"
-                            placeholder="Trailer URL (valgfritt)"
-                            value={
-                              editingTeam === team.id ? videoForm.trailer_url : ""
-                            }
-                            onFocus={() => {
-                              setEditingTeam(team.id);
-                              setVideoForm({ ...videoForm, team_id: team.id });
-                            }}
-                            onChange={(e) =>
-                              setVideoForm({
-                                ...videoForm,
-                                trailer_url: e.target.value,
-                              })
-                            }
-                            className={`${smallInputClass} flex-1`}
-                          />
-                        </div>
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <input
                             type="number"
-                            placeholder="Pris (kr)"
-                            value={
-                              editingTeam === team.id
-                                ? videoForm.price || ""
-                                : ""
-                            }
-                            onFocus={() => {
-                              setEditingTeam(team.id);
-                              setVideoForm({ ...videoForm, team_id: team.id });
-                            }}
-                            onChange={(e) =>
-                              setVideoForm({
-                                ...videoForm,
-                                price: Number(e.target.value),
-                              })
-                            }
-                            className={`${smallInputClass} w-24`}
+                            placeholder="Pris kr"
+                            value={videoForm.price || ""}
+                            onChange={(e) => setVideoForm({ ...videoForm, price: Number(e.target.value) })}
+                            className={smInput}
                           />
                           <input
                             type="number"
                             placeholder="Rekkefølge"
-                            value={
-                              editingTeam === team.id
-                                ? videoForm.sort_order || ""
-                                : ""
-                            }
-                            onFocus={() => {
-                              setEditingTeam(team.id);
-                              setVideoForm({ ...videoForm, team_id: team.id });
-                            }}
-                            onChange={(e) =>
-                              setVideoForm({
-                                ...videoForm,
-                                sort_order: Number(e.target.value),
-                              })
-                            }
-                            className={`${smallInputClass} w-24`}
+                            value={videoForm.sort_order}
+                            onChange={(e) => setVideoForm({ ...videoForm, sort_order: Number(e.target.value) })}
+                            className={smInput}
                           />
-                          <label className="flex items-center gap-1 text-xs text-muted">
+                          <label className="flex items-center gap-1.5 text-xs text-muted px-2">
                             <input
                               type="checkbox"
-                              checked={
-                                editingTeam === team.id
-                                  ? videoForm.published
-                                  : false
-                              }
-                              onChange={(e) =>
-                                setVideoForm({
-                                  ...videoForm,
-                                  published: e.target.checked,
-                                })
-                              }
+                              checked={videoForm.published}
+                              onChange={(e) => setVideoForm({ ...videoForm, published: e.target.checked })}
                               className="rounded border-border"
                             />
                             Publisert
                           </label>
+                        </div>
+                        <div className="flex gap-2">
                           <button
                             onClick={handleCreateVideo}
                             disabled={loading || !videoForm.title}
-                            className="btn-gold rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                            className="btn-gold rounded-lg px-4 py-1.5 text-xs font-medium disabled:opacity-50"
                           >
-                            <span>+ Legg til</span>
+                            + Legg til
+                          </button>
+                          <button
+                            onClick={() => setVideoForm(null)}
+                            className="text-xs text-muted hover:text-foreground px-3 py-1.5"
+                          >
+                            Avbryt
                           </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
+                ))}
 
-                  <div className="rounded-xl border border-dashed border-white/[0.06] p-4 space-y-2">
-                    <h5 className="text-xs font-medium text-muted">
-                      Legg til nytt lag
-                    </h5>
+                {/* Add team */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Nytt lag..."
+                    value={teamForm.name}
+                    onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+                    onKeyDown={(e) => e.key === "Enter" && handleCreateTeam()}
+                    className={`${smInput} flex-1`}
+                  />
+                  <input
+                    type="color"
+                    value={teamForm.color}
+                    onChange={(e) => setTeamForm({ ...teamForm, color: e.target.value })}
+                    className="w-10 h-9 rounded-lg cursor-pointer border-0 bg-transparent"
+                  />
+                  <button
+                    onClick={handleCreateTeam}
+                    disabled={loading || !teamForm.name}
+                    className="btn-gold rounded-lg px-4 py-1.5 text-xs font-medium disabled:opacity-50"
+                  >
+                    + Lag
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Roles */}
+            {activeTab === "roles" && (
+              <div className="space-y-6">
+                {selectedShow.teams.map((team) => (
+                  <div key={team.id} className="glass-card rounded-xl p-4">
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.color }} />
+                      <span className="font-medium text-sm" style={{ color: team.color }}>
+                        {team.name}
+                      </span>
+                    </div>
+
+                    {/* Assigned roles */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {team.team_roles.length === 0 ? (
+                        <p className="text-xs text-muted">Ingen roller tildelt</p>
+                      ) : (
+                        team.team_roles.map((tr) => (
+                          <span
+                            key={tr.id}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] px-2.5 py-1.5 text-xs"
+                          >
+                            <span className="font-medium">{tr.roles.name}</span>
+                            {tr.actor_name && <span className="text-muted">({tr.actor_name})</span>}
+                            <button
+                              onClick={() => handleRemoveRole(tr.id)}
+                              className="text-muted hover:text-danger ml-1"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Assign form */}
                     <div className="flex gap-2">
+                      <select
+                        value={roleAssignForm.role_id}
+                        onChange={(e) => setRoleAssignForm({ ...roleAssignForm, role_id: e.target.value })}
+                        className={`${smInput} flex-1`}
+                        onFocus={loadRoles}
+                      >
+                        <option value="">Velg rolle...</option>
+                        {allRoles.map((r) => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
                       <input
                         type="text"
-                        placeholder="Lagnavn"
-                        value={teamForm.show_id === show.id ? teamForm.name : ""}
-                        onFocus={() => {
-                          setTeamForm({ ...teamForm, show_id: show.id });
-                        }}
-                        onChange={(e) =>
-                          setTeamForm({ ...teamForm, name: e.target.value })
-                        }
-                        className={`${smallInputClass} flex-1`}
-                      />
-                      <input
-                        type="color"
-                        value={teamForm.color}
-                        onChange={(e) =>
-                          setTeamForm({ ...teamForm, color: e.target.value })
-                        }
-                        className="w-10 h-8 rounded cursor-pointer border-0 bg-transparent"
+                        placeholder="Skuespiller"
+                        value={roleAssignForm.actor_name}
+                        onChange={(e) => setRoleAssignForm({ ...roleAssignForm, actor_name: e.target.value })}
+                        className={`${smInput} w-32`}
                       />
                       <button
-                        onClick={handleCreateTeam}
-                        disabled={loading || !teamForm.name}
+                        onClick={() => handleAssignRole(team.id)}
+                        disabled={loading || !roleAssignForm.role_id}
                         className="btn-gold rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
                       >
-                        <span>+ Lag</span>
+                        Tildel
                       </button>
                     </div>
                   </div>
+                ))}
 
-                  {/* Actor overrides */}
-                  <div className="border-t border-white/[0.04] pt-4 mt-2">
+                {/* Create new role */}
+                <div className="glass-card rounded-xl p-4">
+                  <h4 className="text-xs font-medium text-muted mb-3">Opprett ny rolle</h4>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Rolle..."
+                      value={roleFormName}
+                      onChange={(e) => setRoleFormName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleCreateRole()}
+                      className={`${smInput} flex-1`}
+                    />
                     <button
-                      onClick={() =>
-                        setExpandedOverrides(
-                          expandedOverrides === show.id ? null : show.id
-                        )
-                      }
-                      className="flex items-center gap-2 text-xs text-gold hover:text-gold-light transition-colors"
+                      onClick={handleCreateRole}
+                      disabled={loading || !roleFormName.trim()}
+                      className="btn-gold rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
                     >
-                      <svg
-                        className={`w-3.5 h-3.5 transition-transform ${expandedOverrides === show.id ? "rotate-90" : ""}`}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                      Skuespiller-overridinger (vikar per video)
+                      + Ny
                     </button>
-
-                    {expandedOverrides === show.id && (
-                      <div className="mt-4">
-                        <ActorOverridePanel
-                          showId={show.id}
-                          teamRoles={show.teams.flatMap((team) =>
-                            (team.team_roles || []).flatMap((tr) =>
-                              (team.videos || []).map((v) => ({
-                                video_id: v.id,
-                                video_title: v.title,
-                                team_id: team.id,
-                                team_name: team.name,
-                                team_color: team.color,
-                                role_id: tr.role_id,
-                                role_name: tr.roles.name,
-                                default_actor: tr.actor_name,
-                              }))
-                            )
-                          )}
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+              </div>
+            )}
+
+            {/* Tab: Tags */}
+            {activeTab === "tags" && (
+              <div className="glass-card rounded-xl p-4 space-y-3">
+                <h4 className="text-xs font-medium text-muted">Tagger for søk og relaterede forestillinger</h4>
+                {showTags[selectedShow.id] && showTags[selectedShow.id].length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {showTags[selectedShow.id].map((tag) => (
+                      <span key={tag} className="inline-flex items-center gap-1 rounded-lg bg-gold/[0.08] border border-gold/15 px-2.5 py-1 text-xs text-gold">
+                        {tag}
+                        <button
+                          onClick={() => handleRemoveTag(tag)}
+                          className="text-gold/60 hover:text-danger ml-0.5"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Legg til tagger (kommadelt)..."
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                    className={`${smInput} flex-1`}
+                  />
+                  <button
+                    onClick={handleAddTag}
+                    disabled={!tagInput.trim()}
+                    className="btn-gold rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Overrides */}
+            {activeTab === "overrides" && (
+              <ActorOverridePanel
+                showId={selectedShow.id}
+                teamRoles={selectedShow.teams.flatMap((team) =>
+                  (team.team_roles || []).flatMap((tr) =>
+                    (team.videos || []).map((v) => ({
+                      video_id: v.id,
+                      video_title: v.title,
+                      team_id: team.id,
+                      team_name: team.name,
+                      team_color: team.color,
+                      role_id: tr.role_id,
+                      role_name: tr.roles.name,
+                      default_actor: tr.actor_name,
+                    }))
+                  )
+                )}
+              />
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
