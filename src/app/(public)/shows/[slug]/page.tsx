@@ -108,12 +108,12 @@ export default async function ShowPage(props: {
   if (videoIds.length > 0) {
     const { data: overrides } = await adminDb
       .from("video_actor_overrides")
-      .select("video_id, role_id, actor_name")
+      .select("video_id, role_id, character_name")
       .in("video_id", videoIds);
 
     overrides?.forEach((o: any) => {
       if (!overridesMap[o.video_id]) overridesMap[o.video_id] = {};
-      overridesMap[o.video_id][o.role_id] = o.actor_name;
+      overridesMap[o.video_id][o.role_id] = o.character_name;
     });
   }
 
@@ -257,7 +257,7 @@ export default async function ShowPage(props: {
                           const override = videoOverrides[tr.role_id];
                           return {
                             role: tr.roles.name,
-                            default: tr.actor_name,
+                            default: tr.character_name,
                             override: override || null,
                           };
                         })
@@ -329,13 +329,13 @@ export default async function ShowPage(props: {
                       </span>
                     </div>
                   )}
-                  <div className="min-w-0 flex-1">
+                   <div className="min-w-0 flex-1">
                     <span className="text-sm font-medium text-foreground/80 group-hover:text-gold transition-colors">
                       {tr.roles.name}
                     </span>
-                    {tr.actor_name && (
+                    {tr.character_name && (
                       <span className="text-sm text-muted ml-2">
-                        {tr.actor_name}
+                        som {tr.character_name}
                       </span>
                     )}
                   </div>

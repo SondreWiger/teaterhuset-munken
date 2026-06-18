@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 interface Override {
   video_id: string;
   role_id: string;
-  actor_name: string;
+  character_name: string;
 }
 
 interface TeamVideo {
@@ -16,7 +16,7 @@ interface TeamVideo {
   team_color: string;
   role_id: string;
   role_name: string;
-  default_actor: string | null;
+  default_character: string | null;
 }
 
 export function ActorOverridePanel({
@@ -68,7 +68,7 @@ export function ActorOverridePanel({
           body: JSON.stringify({
             video_id: videoId,
             role_id: roleId,
-            actor_name: actorName,
+            character_name: actorName,
           }),
         });
         const data = await res.json();
@@ -108,11 +108,11 @@ export function ActorOverridePanel({
     <div className="space-y-6">
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-1">
-          Skuespiller-overridinger per video
+          Karakter-overridinger per video
         </h3>
         <p className="text-xs text-muted">
           Hvis en skuespiller var syk en dag, kan du sette en vikar for den
-          enkelte videoen her.
+          enkelte videoen her. Skriv inn rollens navn (f.eks. «Romeo»).
         </p>
       </div>
 
@@ -156,8 +156,8 @@ export function ActorOverridePanel({
                       </p>
                       <p className="text-xs text-muted">
                         {entry.role_name}
-                        {entry.default_actor
-                          ? ` (${entry.default_actor})`
+                        {entry.default_character
+                          ? ` (${entry.default_character})`
                           : ""}
                       </p>
                     </div>
@@ -166,13 +166,13 @@ export function ActorOverridePanel({
                       <input
                         type="text"
                         placeholder={
-                          entry.default_actor || "Vikar-navn"
+                          entry.default_character || "Karakternavn"
                         }
-                        defaultValue={override?.actor_name || ""}
+                        defaultValue={override?.character_name || ""}
                         onBlur={(e) => {
                           const val = e.target.value.trim();
                           const currentOverride =
-                            override?.actor_name || "";
+                            override?.character_name || "";
                           if (val !== currentOverride) {
                             setOverride(
                               entry.video_id,

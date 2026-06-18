@@ -28,7 +28,7 @@ interface TeamRole {
   id: string;
   team_id: string;
   role_id: string;
-  actor_name: string | null;
+  character_name: string | null;
   roles: Role;
 }
 
@@ -84,7 +84,7 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
   } | null>(null);
 
   const [allRoles, setAllRoles] = useState<Role[]>([]);
-  const [roleAssignForm, setRoleAssignForm] = useState({ role_id: "", actor_name: "" });
+  const [roleAssignForm, setRoleAssignForm] = useState({ role_id: "", character_name: "" });
   const [roleFormName, setRoleFormName] = useState("");
   const [showTags, setShowTags] = useState<Record<string, string[]>>({});
   const [tagInput, setTagInput] = useState("");
@@ -254,7 +254,7 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
       const data = await api("/api/admin/content/team-role", "POST", {
         team_id: teamId,
         role_id: roleAssignForm.role_id,
-        actor_name: roleAssignForm.actor_name || null,
+        character_name: roleAssignForm.character_name || null,
       });
       const roleData = allRoles.find((r) => r.id === roleAssignForm.role_id);
       const newTeamRole = { ...data, roles: roleData! };
@@ -267,7 +267,7 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
         }))
       );
       toast.success("Rolle tildelt!");
-      setRoleAssignForm({ role_id: "", actor_name: "" });
+      setRoleAssignForm({ role_id: "", character_name: "" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Feil");
     } finally {
@@ -334,7 +334,7 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
     { id: "teams" as const, label: "Lag & Videoer" },
     { id: "roles" as const, label: "Roller" },
     { id: "tags" as const, label: "Tagger" },
-    { id: "overrides" as const, label: "Vikar" },
+    { id: "overrides" as const, label: "Vikar-roller" },
   ];
 
   return (
@@ -673,7 +673,7 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
                             className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] px-2.5 py-1.5 text-xs"
                           >
                             <span className="font-medium">{tr.roles.name}</span>
-                            {tr.actor_name && <span className="text-muted">({tr.actor_name})</span>}
+                            {tr.character_name && <span className="text-muted">({tr.character_name})</span>}
                             <button
                               onClick={() => handleRemoveRole(tr.id)}
                               className="text-muted hover:text-danger ml-1"
@@ -700,9 +700,9 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
                       </select>
                       <input
                         type="text"
-                        placeholder="Skuespiller"
-                        value={roleAssignForm.actor_name}
-                        onChange={(e) => setRoleAssignForm({ ...roleAssignForm, actor_name: e.target.value })}
+                        placeholder="Karakter"
+                        value={roleAssignForm.character_name}
+                        onChange={(e) => setRoleAssignForm({ ...roleAssignForm, character_name: e.target.value })}
                         className={`${smInput} w-32`}
                       />
                       <button
@@ -793,7 +793,7 @@ export function ContentManager({ shows: initialShows }: { shows: Show[] }) {
                       team_color: team.color,
                       role_id: tr.role_id,
                       role_name: tr.roles.name,
-                      default_actor: tr.actor_name,
+                        default_character: tr.character_name,
                     }))
                   )
                 )}

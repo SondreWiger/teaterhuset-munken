@@ -114,8 +114,8 @@ export default async function TeamPage(props: {
                     <p className="font-medium group-hover:text-gold transition-colors">
                       {tr.roles.name}
                     </p>
-                    {tr.actor_name && (
-                      <p className="text-xs text-muted">{tr.actor_name}</p>
+                    {tr.character_name && (
+                      <p className="text-xs text-muted">Spiller {tr.character_name}</p>
                     )}
                   </div>
                 </Link>

@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     .insert({
       team_id: body.team_id,
       role_id: body.role_id,
-      actor_name: body.actor_name || null,
+      character_name: body.character_name || null,
       sort_order: body.sort_order ?? 0,
     })
     .select()

@@ -140,7 +140,7 @@ export interface TeamRole {
   id: string;
   team_id: string;
   role_id: string;
-  actor_name: string | null;
+  character_name: string | null;
   sort_order: number;
   created_at: string;
 }

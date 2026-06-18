@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const ctx = await checkAdmin();
   if (!ctx) return NextResponse.json({ error: "Ikke tilgang" }, { status: 403 });
 
-  const { video_id, role_id, actor_name } = await request.json();
+  const { video_id, role_id, character_name } = await request.json();
   if (!video_id || !role_id) {
     return NextResponse.json({ error: "video_id and role_id required" }, { status: 400 });
   }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const { data, error } = await ctx.adminDb
     .from("video_actor_overrides")
     .upsert(
-      { video_id, role_id, actor_name: actor_name || "" },
+      { video_id, role_id, character_name: character_name || "" },
       { onConflict: "video_id,role_id" }
     )
     .select()

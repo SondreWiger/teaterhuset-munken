@@ -30,7 +30,7 @@ export default async function RolePage(props: {
 
   const overrideMap: Record<string, string> = {};
   overrides?.forEach((o: any) => {
-    overrideMap[o.video_id] = o.actor_name;
+    overrideMap[o.video_id] = o.character_name;
   });
 
   // Group by show -> team -> videos
@@ -42,7 +42,7 @@ export default async function RolePage(props: {
         string,
         {
           team: any;
-          actor_name: string | null;
+          character_name: string | null;
           videos: any[];
         }
       >;
@@ -62,7 +62,7 @@ export default async function RolePage(props: {
     if (!showData.teams.has(team.id)) {
       showData.teams.set(team.id, {
         team,
-        actor_name: tr.actor_name,
+        character_name: tr.character_name,
         videos: [],
       });
     }
@@ -187,7 +187,7 @@ export default async function RolePage(props: {
         ) : (
           <div className="space-y-12">
             <h2 className="text-2xl font-bold">
-              Opptredener i{" "}
+              Opptredener for{" "}
               <span className="text-gradient-gold">{role.name}</span>
             </h2>
 
@@ -222,7 +222,7 @@ export default async function RolePage(props: {
                   </Link>
 
                   <div className="space-y-6 ml-0 sm:ml-[3.5rem]">
-                    {teams.map(({ team, actor_name, videos }) => (
+                    {teams.map(({ team, character_name, videos }) => (
                       <div key={team.id}>
                         {/* Team header */}
                         <div className="flex items-center gap-2.5 mb-3">
@@ -239,9 +239,9 @@ export default async function RolePage(props: {
                           >
                             {team.name}
                           </span>
-                          {actor_name && (
+                          {character_name && (
                             <span className="text-xs text-muted">
-                              · Spilt av {actor_name}
+                              · Spiller {character_name}
                             </span>
                           )}
                         </div>
@@ -269,8 +269,8 @@ export default async function RolePage(props: {
                                       <span className="text-gold">
                                         {video.actor_override} (vikar)
                                       </span>
-                                    ) : actor_name ? (
-                                      <span>{actor_name}</span>
+                                      ) : character_name ? (
+                                        <span>{character_name}</span>
                                     ) : null}
                                     {video.price > 0 && (
                                       <>
